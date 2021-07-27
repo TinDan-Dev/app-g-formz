@@ -1,0 +1,22 @@
+builders:
+  genericInputGeneratorBuilder:
+    import: 'package:g_formz/generic_input_generator.dart'
+    builder_factories: ['genericInputGeneratorBuilder']
+    auto_apply: dependents
+    build_extensions: {".dart": [".generic_input.part"]}
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]
+  copyWithGeneratorBuilder:
+    import: 'package:g_formz/copy_with_generator.dart'
+    builder_factories: ['copyWithGeneratorBuilder']
+    auto_apply: dependents
+    build_extensions: {".dart": [".copy_with.part"]}
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]
+  assetGeneratorBuilder:
+    import: 'package:g_formz/asset_generator.dart'
+    builder_factories: ['assetGeneratorBuilder']
+    auto_apply: dependents
+    build_extensions: {".dart": [".asset.part"]}
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]

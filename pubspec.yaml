@@ -1,0 +1,17 @@
+name: g_formz
+description: Generation for formz
+
+environment:
+  sdk: '>=2.13.0 <3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  source_gen: '>=1.0.0 <=2.0.0'
+  code_builder: '>=3.7.0 <=4.0.0'
+
+  lint: ^1.5.3
+
+  formz:
+    git: https://github.com/TinDan-Dev/app-formz.git
