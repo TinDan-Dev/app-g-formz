@@ -151,10 +151,10 @@ packages:
     description:
       path: "."
       ref: HEAD
-      resolved-ref: e9fd4686a03eb487890e7bb2293c70baaa93c08c
-      url: "https://github.com/TinDan-Dev/app-formz.git"
+      resolved-ref: "14aade724ebc678c789f0d6baa4ddf2012633e98"
+      url: "ssh://git@github.com/TinDan-Dev/app-formz.git"
     source: git
-    version: "1.0.0+1"
+    version: "1.0.1"
   freezed_annotation:
     dependency: transitive
     description:
