@@ -48,7 +48,7 @@ class AssetGenerator extends GeneratorForAnnotation<AssetClass> {
 
       switch (asset.type) {
         case _AssetType.string:
-          fieldsBuf.write("'''\n");
+          fieldsBuf.write("r'''\n");
           fieldsBuf.write(await file.readAsString());
           fieldsBuf.write("''';\n");
           break;

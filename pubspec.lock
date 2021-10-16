@@ -9,7 +9,7 @@ packages:
     source: hosted
     version: "22.0.0"
   analyzer:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: analyzer
       url: "https://pub.dartlang.org"
@@ -149,11 +149,9 @@ packages:
   formz:
     dependency: "direct main"
     description:
-      path: "."
-      ref: HEAD
-      resolved-ref: d380c4d998f4a70fca5a7a0df0c35162bd7639cd
-      url: "ssh://git@github.com/TinDan-Dev/app-formz.git"
-    source: git
+      path: "../app-formz"
+      relative: true
+    source: path
     version: "1.0.2"
   freezed_annotation:
     dependency: transitive

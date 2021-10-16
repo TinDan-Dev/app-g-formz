@@ -19,5 +19,5 @@ dependencies:
   lint: ^1.5.3
 
   formz:
-#    path: ../app-formz
-    git: ssh://git@github.com/TinDan-Dev/app-formz.git
+    path: ../app-formz
+#    git: ssh://git@github.com/TinDan-Dev/app-formz.git
