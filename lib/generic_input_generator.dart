@@ -6,7 +6,7 @@ import 'package:code_builder/code_builder.dart';
 import 'package:formz/annotation.dart';
 import 'package:source_gen/source_gen.dart';
 
-import 'utils.dart';
+import 'utils/utils.dart';
 
 Builder genericInputGeneratorBuilder(BuilderOptions options) =>
     SharedPartBuilder([GenericInputGenerator()], 'generic_input');
@@ -29,7 +29,7 @@ class GenericInputGenerator extends GeneratorForAnnotation<GenGenericInput> {
 
   @override
   Future<String> generateForAnnotatedElement(Element element, ConstantReader annotation, BuildStep buildStep) async {
-    final libraries = await buildStep.resolver.libraries.toList();
+    final ctx = await LibraryContext.fromBuildStep(buildStep);
 
     if (element is! ClassElement) throw UnsupportedError('the annotation target should be a class');
     _isValidClass(element);
@@ -38,7 +38,7 @@ class GenericInputGenerator extends GeneratorForAnnotation<GenGenericInput> {
     final name = element.name;
     final inputName = element.name.replaceAll('CriteriaCollection', '');
     final docs = element.documentationComment;
-    final type = resolveDartType(libraries, element.allSupertypes[0].typeArguments[0]);
+    final type = ctx.resolveDartType(element.allSupertypes[0].typeArguments[0]);
 
     final classBuffer = StringBuffer();
 

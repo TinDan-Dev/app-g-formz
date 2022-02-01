@@ -20,3 +20,10 @@ builders:
     build_extensions: {".dart": [".asset.part"]}
     build_to: cache
     applies_builders: ["source_gen|combining_builder"]
+  parserGeneratorBuilder:
+    import: 'package:g_formz/parser_generator.dart'
+    builder_factories: ['parserGeneratorBuilder']
+    auto_apply: dependents
+    build_extensions: {".dart": [".parser.part"]}
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]
