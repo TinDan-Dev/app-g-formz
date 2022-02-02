@@ -1,16 +1,10 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/type.dart';
 
 import '../../utils/log.dart';
-import '../../utils/utils.dart';
 import '../arl/arl.dart';
 
-List<Rule> analyzeRules(ClassElement element) {
-  final ast = getAstNodeFromElement(element);
-  if (ast == null) {
-    error(null, 'Class ast node was not found');
-  }
-
+List<Rule> analyzeRules(AstNode? ast) {
   if (ast is! ClassDeclaration) {
     error(ast, 'Expected class declaration, but found: ${ast.runtimeType}');
   }
@@ -31,10 +25,11 @@ List<Rule> analyzeRules(ClassElement element) {
   }
 
   final rules = <Rule>[];
-  for (final element in expression.elements) {
+  for (int i = 0; i < expression.elements.length; i++) {
+    final element = expression.elements[i];
     if (element is MethodInvocation) {
       final node = parseRule(element);
-      rules.add(Rule.fromARL(node));
+      rules.add(Rule.fromARL(node, i));
     }
   }
 
@@ -42,6 +37,9 @@ List<Rule> analyzeRules(ClassElement element) {
 }
 
 class Rule {
+  /// The index of this rule.
+  final int index;
+
   /// The end node for this rule.
   final ARLNode node;
 
@@ -57,24 +55,31 @@ class Rule {
   /// Whether this rule includes a null check or not.
   final bool nullChecked;
 
+  /// The type of the validator used in this rule, or null of none was used.
+  final DartType? validator;
+
   Rule._({
+    required this.index,
     required this.node,
     required this.nodeCount,
     required this.name,
     required this.fieldName,
     required this.nullChecked,
+    required this.validator,
   });
 
-  factory Rule.fromARL(ARLNode node) {
+  factory Rule.fromARL(ARLNode node, int index) {
     final analyzer = RuleAnalyzer();
     node.visit(analyzer, null);
 
     return Rule._(
+      index: index,
       node: node,
       nodeCount: analyzer.nodeCount,
       name: analyzer.name,
       fieldName: analyzer.fieldName,
       nullChecked: analyzer.nullChecked,
+      validator: analyzer.validator,
     );
   }
 }
@@ -86,6 +91,8 @@ class RuleAnalyzer extends ARLVisitor<void> {
   String? fieldName;
 
   bool nullChecked;
+
+  DartType? validator;
 
   RuleAnalyzer()
       : nodeCount = 0,
@@ -115,5 +122,14 @@ class RuleAnalyzer extends ARLVisitor<void> {
     }
 
     nullChecked = true;
+  }
+
+  @override
+  void visitValidatorNode(ValidatorNode node, void args) {
+    if (validator != null) {
+      warning(node.element, 'Seconde validator will be ignored, use a new rule for each validator');
+    }
+
+    validator = node.validatorType;
   }
 }

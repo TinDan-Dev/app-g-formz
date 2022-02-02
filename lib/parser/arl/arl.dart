@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
@@ -88,6 +89,23 @@ class NullCheckNode extends AttachedNode {
   }
 }
 
+class ValidatorNode extends AttachedNode {
+  final DartType validatorType;
+
+  const ValidatorNode(
+    Element element, {
+    required this.validatorType,
+    required ARLNode child,
+    required RootNode root,
+  }) : super(element, child: child, root: root);
+
+  @override
+  void visit<T>(ARLVisitor<T> visitor, T args) {
+    visitor.visitValidatorNode(this, args);
+    super.visit(visitor, args);
+  }
+}
+
 /// A visitor that can walk down the ARL.
 abstract class ARLVisitor<T> {
   void visitRootNode(RootNode node, T args);
@@ -97,4 +115,6 @@ abstract class ARLVisitor<T> {
   void visitAttachedNode(AttachedNode node, T args);
 
   void visitNullCheckNode(NullCheckNode node, T args);
+
+  void visitValidatorNode(ValidatorNode node, T args);
 }

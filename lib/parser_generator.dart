@@ -6,6 +6,7 @@ import 'package:code_builder/code_builder.dart';
 import 'package:formz/annotation.dart';
 import 'package:source_gen/source_gen.dart';
 
+import 'parser/analyzer/converter/validator_converter.dart';
 import 'parser/analyzer/create_method.dart';
 import 'parser/analyzer/parameter.dart';
 import 'parser/analyzer/parser.dart';
@@ -25,8 +26,11 @@ class ParserGenerator extends GeneratorForAnnotation<Parser> {
     final ctx = await LibraryContext.fromBuildStep(buildStep);
 
     final info = analyzeParser(element, annotation);
-    final rules = analyzeRules(element as ClassElement);
-    final method = analyzeCreateMethod(element, info);
+    final rules = analyzeRules(await buildStep.resolver.astNodeFor(element, resolve: true));
+
+    addValidatorConvert(info, rules);
+
+    final method = analyzeCreateMethod(element as ClassElement, info);
 
     for (final params in info.converterParameters) {
       addParameterConverter(params, info, rules);

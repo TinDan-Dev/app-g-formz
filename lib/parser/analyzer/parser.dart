@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:collection/collection.dart';
 import 'package:source_gen/source_gen.dart';
 
 import '../../utils/log.dart';
@@ -47,19 +48,19 @@ ParserInfo analyzeParser(Element element, ConstantReader annotation) {
     error(null, 'Parser should be a class, but is ${element.runtimeType}');
   }
 
-  final superClasses = element.allSupertypes.where((e) => _validatorChecker.isExactlyType(e)).toList();
-  if (superClasses.isEmpty) {
-    error(null, 'Parser must be a subclass of Validator');
+  final supertype = element.allSupertypes.firstWhereOrNull((e) => _validatorChecker.isExactlyType(e));
+  if (supertype == null) {
+    error(null, 'Parser should be a subclass of Validator');
+  }
+
+  final source = supertype.typeArguments.firstOrNull?.element;
+  if (source is! ClassElement) {
+    error(null, 'Parser does not declare a type argument for Validator');
   }
 
   final target = annotation.read('target').typeValue.element;
   if (target is! ClassElement) {
     error(null, 'Target should be a class');
-  }
-
-  final source = annotation.read('source').typeValue.element;
-  if (source is! ClassElement) {
-    error(null, 'Source should be a class');
   }
 
   final converterCollector = MethodConverterCollector();

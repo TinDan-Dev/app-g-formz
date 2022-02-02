@@ -28,6 +28,14 @@ ParserStepResult _parseRule(Element invocation) {
     case 'notNull':
       return prevResult..node = NullCheckNode(invocation, root: prevResult.root, child: prevResult.node);
 
+    case 'validator':
+      final result = _parseValidatorNode(invocation, prevResult);
+      if (result != null) {
+        prevResult.node = result;
+      }
+
+      return prevResult;
+
     default:
       warning(invocation, 'Unknown method');
       return prevResult;
@@ -114,4 +122,25 @@ String? _fieldNameFromArgumentList(ArgumentList list) {
   }
 
   return expression.identifier.name;
+}
+
+ARLNode? _parseValidatorNode(Element invocation, ParserStepResult prevResult) {
+  final args = invocation.argumentList.arguments;
+
+  if (args.length != 1) {
+    warning(invocation, 'Expected exactly one argument');
+    return null;
+  }
+
+  final validatorType = args[0].staticType;
+  if (validatorType == null) {
+    error(args[0], 'Could not determine type of validator');
+  }
+
+  return ValidatorNode(
+    invocation,
+    validatorType: validatorType,
+    child: prevResult.node,
+    root: prevResult.root,
+  );
 }

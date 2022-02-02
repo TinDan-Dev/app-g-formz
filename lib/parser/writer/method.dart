@@ -1,7 +1,7 @@
 import 'package:code_builder/code_builder.dart';
 
 import '../../utils/utils.dart';
-import '../analyzer/converter/method_converter.dart';
+import '../analyzer/converter/converter.dart';
 import '../analyzer/create_method.dart';
 import '../analyzer/parameter.dart';
 import '../analyzer/parser.dart';
@@ -10,12 +10,21 @@ import 'converter.dart';
 
 Method buildConvertMethod(LibraryContext ctx, MethodConverterWriteInfo info) {
   final toRef = ctx.resolveDartType(info.to);
+  final bodyAllocator = info.body;
+
+  final Code? body;
+  if (bodyAllocator != null) {
+    body = Code.scope((allocate) => bodyAllocator(ctx, allocate));
+  } else {
+    body = null;
+  }
 
   return Method(
     (builder) => builder
       ..name = info.methodName
       ..returns = toRef
-      ..requiredParameters.addAll(_buildParameters(ctx, info.methodParameters)),
+      ..requiredParameters.addAll(_buildParameters(ctx, info.methodParameters))
+      ..body = body,
   );
 }
 

@@ -1,6 +1,7 @@
 import 'package:meta/meta.dart';
 
 import '../analyzer/converter/method_converter.dart';
+import '../analyzer/converter/validator_converter.dart';
 import '../analyzer/parameter.dart';
 
 Iterable<String> buildArguments(List<MethodParameter> parameter) sync* {
@@ -60,5 +61,16 @@ class FieldMethodConverter extends ArgumentConverter {
     final params = [super.apply(parameter), ...buildArguments(info.parameters.sublist(1))].join(', ');
 
     return '${info.methodName}($params)';
+  }
+}
+
+class ValidatorConverter extends ArgumentConverter {
+  final ValidatorConverterInfo info;
+
+  ValidatorConverter(this.info, {ArgumentConverter? child}) : super(child);
+
+  @override
+  String apply(String parameter) {
+    return '${info.methodName}(${super.apply(parameter)})';
   }
 }

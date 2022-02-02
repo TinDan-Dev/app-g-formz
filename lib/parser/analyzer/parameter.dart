@@ -2,12 +2,13 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:collection/collection.dart';
-import 'package:g_formz/parser/analyzer/converter/converter.dart';
-import 'package:g_formz/parser/analyzer/converter/method_converter.dart';
 import 'package:source_gen/source_gen.dart';
 
 import '../../utils/log.dart';
 import '../writer/converter.dart';
+import 'converter/converter.dart';
+import 'converter/method_converter.dart';
+import 'converter/validator_converter.dart';
 import 'parser.dart';
 import 'rule.dart';
 
@@ -36,6 +37,9 @@ ArgumentConverter? _fromConverter(ConverterInfo info, {ArgumentConverter? child}
   }
   if (info is FieldMethodConverterInfo) {
     return FieldMethodConverter(info, child: child);
+  }
+  if (info is ValidatorConverterInfo) {
+    return ValidatorConverter(info);
   }
 
   return child;

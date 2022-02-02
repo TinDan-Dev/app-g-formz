@@ -10,12 +10,6 @@ import 'converter.dart';
 
 const _converterChecker = TypeChecker.fromRuntime(Convert);
 
-abstract class MethodConverterWriteInfo {
-  DartType get to;
-  String get methodName;
-  List<MethodParameter> get methodParameters;
-}
-
 class MethodConverterInfo extends ConverterInfo implements MethodConverterWriteInfo {
   @override
   final String methodName;
@@ -34,6 +28,9 @@ class MethodConverterInfo extends ConverterInfo implements MethodConverterWriteI
         MethodParameter('value', from),
         ...parameters,
       ];
+
+  @override
+  AllocateBody? get body => null;
 }
 
 class FieldMethodConverterInfo extends FieldConverterInfo implements MethodConverterWriteInfo {
@@ -52,11 +49,14 @@ class FieldMethodConverterInfo extends FieldConverterInfo implements MethodConve
 
   @override
   List<MethodParameter> get methodParameters => parameters;
+
+  @override
+  AllocateBody? get body => null;
 }
 
 class MethodConverterCollector extends SimpleElementVisitor<void> {
-  final List<MethodConverterInfo> converters;
-  final List<FieldMethodConverterInfo> fieldConverters;
+  final List<ConverterInfo> converters;
+  final List<FieldConverterInfo> fieldConverters;
 
   MethodConverterCollector()
       : converters = [],
