@@ -7,6 +7,7 @@ import 'package:formz/annotation.dart';
 import 'package:source_gen/source_gen.dart';
 
 import 'parser/analyzer/create_method.dart';
+import 'parser/analyzer/parameter.dart';
 import 'parser/analyzer/parser.dart';
 import 'parser/analyzer/rule.dart';
 import 'parser/writer/extension.dart';
@@ -27,15 +28,21 @@ class ParserGenerator extends GeneratorForAnnotation<Parser> {
     final rules = analyzeRules(element as ClassElement);
     final method = analyzeCreateMethod(element, info);
 
-    addParameterConverter(method, info, rules);
+    for (final params in info.converterParameters) {
+      addParameterConverter(params, info, rules);
+    }
 
-    final emitter = DartEmitter(useNullSafetySyntax: true);
+    addParameterConverter(method.parameters, info, rules);
+
+    final convertMethods = info.methodConverter.map((e) => buildConvertMethod(ctx, e)).toList();
 
     final createMethod = buildCreateMethod(ctx, info, method);
     final createMethodInvocation = buildCreateMethodInvocation(ctx, info, method);
 
-    final mixin = buildMixin(ctx, info, {createMethod: createMethodInvocation});
+    final mixin = buildMixin(ctx, info, {createMethod: createMethodInvocation}, convertMethods);
     final extension = buildExtension(ctx, info, element);
+
+    final emitter = DartEmitter(useNullSafetySyntax: true);
 
     return '''
     ${mixin.accept(emitter)}

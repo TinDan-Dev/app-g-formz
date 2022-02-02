@@ -1,12 +1,26 @@
 import 'package:code_builder/code_builder.dart';
 
 import '../../utils/utils.dart';
+import '../analyzer/converter/method_converter.dart';
 import '../analyzer/create_method.dart';
+import '../analyzer/parameter.dart';
 import '../analyzer/parser.dart';
 import '../opt.dart';
+import 'converter.dart';
+
+Method buildConvertMethod(LibraryContext ctx, MethodConverterWriteInfo info) {
+  final toRef = ctx.resolveDartType(info.to);
+
+  return Method(
+    (builder) => builder
+      ..name = info.methodName
+      ..returns = toRef
+      ..requiredParameters.addAll(_buildParameters(ctx, info.methodParameters)),
+  );
+}
 
 Method buildCreateMethod(LibraryContext ctx, ParserInfo info, CreateMethod method) {
-  final targetRef = ctx.resolveDartType(info.target);
+  final targetRef = ctx.resolveDartType(info.targetType);
 
   return Method(
     (builder) => builder
@@ -16,7 +30,7 @@ Method buildCreateMethod(LibraryContext ctx, ParserInfo info, CreateMethod metho
   );
 }
 
-Iterable<Parameter> _buildParameters(LibraryContext ctx, List<CreateParameter> parameters) sync* {
+Iterable<Parameter> _buildParameters(LibraryContext ctx, List<MethodParameter> parameters) sync* {
   for (final param in parameters) {
     yield Parameter(
       (builder) => builder
@@ -27,8 +41,8 @@ Iterable<Parameter> _buildParameters(LibraryContext ctx, List<CreateParameter> p
 }
 
 Expression buildCreateMethodInvocation(LibraryContext ctx, ParserInfo info, CreateMethod method) {
-  final targetRef = ctx.resolveDartType(info.target);
-  final args = _buildArguments(method.parameters, method.converters).join(', ');
+  final targetRef = ctx.resolveDartType(info.targetType);
+  final args = buildArguments(method.parameters).join(', ');
 
   return Method(
     (builder) => builder
@@ -36,19 +50,4 @@ Expression buildCreateMethodInvocation(LibraryContext ctx, ParserInfo info, Crea
       ..returns = targetRef
       ..body = Code('return $createInstanceMethodName($args);'),
   ).closure;
-}
-
-Iterable<String> _buildArguments(List<CreateParameter> parameter, ConverterMap converters) sync* {
-  for (final param in parameter) {
-    var arg = 'source.${param.name}';
-
-    final sortedConverter = converters[param] ?? [];
-    sortedConverter.sort((a, b) => a.priority.compareTo(b.priority));
-
-    for (final converter in sortedConverter) {
-      arg = converter.apply(arg);
-    }
-
-    yield arg;
-  }
 }

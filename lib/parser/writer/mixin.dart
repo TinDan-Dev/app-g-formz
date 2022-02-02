@@ -4,8 +4,13 @@ import '../../utils/utils.dart';
 import '../analyzer/parser.dart';
 import '../opt.dart';
 
-Mixin buildMixin(LibraryContext ctx, ParserInfo info, Map<Method, Expression> methods) {
-  final sourceRef = ctx.resolveDartType(info.source);
+Mixin buildMixin(
+  LibraryContext ctx,
+  ParserInfo info,
+  Map<Method, Expression> createMethods,
+  List<Method> additionalMethods,
+) {
+  final sourceRef = ctx.resolveDartType(info.sourceType);
 
   final validatorType = TypeReference(
     (builder) => builder
@@ -14,20 +19,21 @@ Mixin buildMixin(LibraryContext ctx, ParserInfo info, Map<Method, Expression> me
       ..types.add(sourceRef),
   );
 
-  final parseMethod = _createParseMethod(ctx, info, methods);
+  final parseMethod = _createParseMethod(ctx, info, createMethods);
 
   return Mixin(
     (builder) => builder
       ..name = '_\$${info.name}'
       ..on = validatorType
-      ..methods.addAll(methods.keys)
+      ..methods.addAll(createMethods.keys)
+      ..methods.addAll(additionalMethods)
       ..methods.add(parseMethod),
   );
 }
 
 Method _createParseMethod(LibraryContext ctx, ParserInfo info, Map<Method, Expression> methods) {
-  final sourceRef = ctx.resolveDartType(info.source);
-  final targetRef = ctx.resolveDartType(info.target);
+  final sourceRef = ctx.resolveDartType(info.sourceType);
+  final targetRef = ctx.resolveDartType(info.targetType);
 
   final resultRef = TypeReference(
     (builder) => builder

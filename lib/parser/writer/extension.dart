@@ -6,8 +6,8 @@ import '../analyzer/parser.dart';
 import '../opt.dart';
 
 Extension buildExtension(LibraryContext ctx, ParserInfo info, ClassElement element) {
-  final sourceRef = ctx.resolveDartType(info.source);
-  final targetRef = ctx.resolveDartType(info.target);
+  final sourceRef = ctx.resolveDartType(info.sourceType);
+  final targetRef = ctx.resolveDartType(info.targetType);
   final validator = ctx.resolveDartType(element.thisType);
 
   final resultRef = TypeReference(

@@ -1,11 +1,15 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
-void warning(AstNode cause, String msg) {
-  print('''
-  $msg @:
+void warning(AstNode? cause, String msg) {
+  if (cause != null) {
+    print('''
+    $msg @:
 
-  ${cause.toSource()}
-  ''');
+    ${cause.toSource()}
+    ''');
+  } else {
+    print(msg);
+  }
 }
 
 Never error(AstNode? cause, msg) {
