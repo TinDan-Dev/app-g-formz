@@ -25,7 +25,7 @@ class ParserGenerator extends GeneratorForAnnotation<Parser> {
   Future<String> generateForAnnotatedElement(Element element, ConstantReader annotation, BuildStep buildStep) async {
     final ctx = await LibraryContext.fromBuildStep(buildStep);
 
-    final info = analyzeParser(element, annotation);
+    final info = analyzeParser(ctx, element, annotation);
     final rules = analyzeRules(await buildStep.resolver.astNodeFor(element, resolve: true));
 
     addValidatorConvert(info, rules);

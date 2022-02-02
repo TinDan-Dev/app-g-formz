@@ -103,7 +103,6 @@ class LibraryContext {
 
   /// Resolves a function type.
   TypeReference resolveFunctionType(
-    LibraryContext ctx,
     ExecutableElement executableElement, {
     bool nullable = false,
   }) {
@@ -116,9 +115,12 @@ class LibraryContext {
       elementToImport = enclosingElement;
     }
 
+    final prefix = _resolveDartTypePrefix(enclosingElement);
+
     return TypeReference((builder) => builder
-      ..symbol = displayName
+      ..symbol = prefix == null ? displayName : '$prefix.$displayName'
       ..url = _resolveImport(elementToImport)
+      ..types.addAll(_resolveTypeArguments(executableElement.type))
       ..isNullable = nullable);
   }
 }

@@ -65,9 +65,7 @@ class MethodConverterCollector extends SimpleElementVisitor<void> {
   final List<ConverterInfo> converters;
   final List<FieldConverterInfo> fieldConverters;
 
-  MethodConverterCollector()
-      : converters = [],
-        fieldConverters = [];
+  MethodConverterCollector(this.converters, this.fieldConverters);
 
   @override
   void visitMethodElement(MethodElement node) {

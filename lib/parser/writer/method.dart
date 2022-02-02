@@ -38,7 +38,7 @@ Iterable<Parameter> _buildParameters(LibraryContext ctx, List<MethodParameter> p
 
 Expression buildCreateMethodInvocation(LibraryContext ctx, ParserInfo info, CreateMethod method) {
   final targetRef = ctx.resolveDartType(info.targetType);
-  final args = buildArguments(method.methodParameters).join(', ');
+  final args = buildArguments(method.methodParameters, ctx, (ref) => ref.symbol!).join(', ');
 
   return Method(
     (builder) => builder

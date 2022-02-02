@@ -1,6 +1,8 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:collection/collection.dart';
+import 'package:g_formz/parser/analyzer/converter/extern_converter.dart';
+import 'package:g_formz/utils/utils.dart';
 import 'package:source_gen/source_gen.dart';
 
 import '../../utils/log.dart';
@@ -36,7 +38,7 @@ class ParserInfo {
   DartType get sourceType => source.thisType;
 }
 
-ParserInfo analyzeParser(Element element, ConstantReader annotation) {
+ParserInfo analyzeParser(LibraryContext ctx, Element element, ConstantReader annotation) {
   if (element is! ClassElement) {
     error(null, 'Parser should be a class, but is ${element.runtimeType}');
   }
@@ -57,11 +59,17 @@ ParserInfo analyzeParser(Element element, ConstantReader annotation) {
   }
 
   final useConstructor = annotation.read('useConstructor').boolValue;
+
+  final converters = <ConverterInfo>[];
+  final fieldConverters = <FieldConverterInfo>[];
+
+  final converterCollector = MethodConverterCollector(converters, fieldConverters);
+  element.visitChildren(converterCollector);
+
   final externConverter =
       annotation.read('converter').listValue.map((e) => e.toFunctionValue()).whereNotNull().toList();
 
-  final converterCollector = MethodConverterCollector();
-  element.visitChildren(converterCollector);
+  converters.addAll(analyzeExternConverter(externConverter));
 
   return ParserInfo(
     source: source,

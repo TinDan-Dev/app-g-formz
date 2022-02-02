@@ -7,6 +7,7 @@ import 'package:source_gen/source_gen.dart';
 import '../../utils/log.dart';
 import '../writer/converter.dart';
 import 'converter/converter.dart';
+import 'converter/extern_converter.dart';
 import 'converter/method_converter.dart';
 import 'converter/validator_converter.dart';
 import 'parser.dart';
@@ -40,6 +41,9 @@ ArgumentConverter? _fromConverter(ConverterInfo info, {ArgumentConverter? child}
   }
   if (info is ValidatorConverterInfo) {
     return ValidatorConverter(info);
+  }
+  if (info is ExternConverterInfo) {
+    return ExternConverter(info);
   }
 
   return child;
