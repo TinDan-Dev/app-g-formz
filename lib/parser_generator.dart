@@ -7,7 +7,7 @@ import 'package:formz/annotation.dart';
 import 'package:source_gen/source_gen.dart';
 
 import 'parser/analyzer/converter/validator_converter.dart';
-import 'parser/analyzer/create_method.dart';
+import 'parser/analyzer/method.dart';
 import 'parser/analyzer/parameter.dart';
 import 'parser/analyzer/parser.dart';
 import 'parser/analyzer/rule.dart';
@@ -30,21 +30,26 @@ class ParserGenerator extends GeneratorForAnnotation<Parser> {
 
     addValidatorConvert(info, rules);
 
-    final method = analyzeCreateMethod(element as ClassElement, info);
-
-    for (final params in info.converterParameters) {
-      addParameterConverter(params, info, rules);
+    final CreateMethod method;
+    if (info.useConstructor) {
+      method = analyzeCreateConstructor(info);
+    } else {
+      method = analyzeCreateMethod(element as ClassElement, info);
     }
 
-    addParameterConverter(method.parameters, info, rules);
+    final methods = <MethodWriteInfo>[method];
+    methods.addAll(info.converters.whereType<MethodWriteInfo>());
+    methods.addAll(info.fieldConverters.whereType<MethodWriteInfo>());
 
-    final convertMethods = info.methodConverter.map((e) => buildConvertMethod(ctx, e)).toList();
+    for (final m in methods) {
+      addParameterConverter(m.parameters, info, rules);
+    }
 
-    final createMethod = buildCreateMethod(ctx, info, method);
+    final buildMethods = methods.map((e) => buildMethod(ctx, e)).toList();
+
     final createMethodInvocation = buildCreateMethodInvocation(ctx, info, method);
-
-    final mixin = buildMixin(ctx, info, {createMethod: createMethodInvocation}, convertMethods);
-    final extension = buildExtension(ctx, info, element);
+    final mixin = buildMixin(ctx, info, createMethodInvocation, buildMethods);
+    final extension = buildExtension(ctx, info, element as ClassElement);
 
     final emitter = DartEmitter(useNullSafetySyntax: true);
 

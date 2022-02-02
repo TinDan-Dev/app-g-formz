@@ -7,8 +7,8 @@ import '../opt.dart';
 Mixin buildMixin(
   LibraryContext ctx,
   ParserInfo info,
-  Map<Method, Expression> createMethods,
-  List<Method> additionalMethods,
+  Expression createMethodInvocation,
+  List<Method> methods,
 ) {
   final sourceRef = ctx.resolveDartType(info.sourceType);
 
@@ -19,19 +19,18 @@ Mixin buildMixin(
       ..types.add(sourceRef),
   );
 
-  final parseMethod = _createParseMethod(ctx, info, createMethods);
+  final parseMethod = _createParseMethod(ctx, info, createMethodInvocation);
 
   return Mixin(
     (builder) => builder
       ..name = '_\$${info.name}'
       ..on = validatorType
-      ..methods.addAll(createMethods.keys)
-      ..methods.addAll(additionalMethods)
+      ..methods.addAll(methods)
       ..methods.add(parseMethod),
   );
 }
 
-Method _createParseMethod(LibraryContext ctx, ParserInfo info, Map<Method, Expression> methods) {
+Method _createParseMethod(LibraryContext ctx, ParserInfo info, Expression createMethodInvocation) {
   final sourceRef = ctx.resolveDartType(info.sourceType);
   final targetRef = ctx.resolveDartType(info.targetType);
 
@@ -53,7 +52,7 @@ Method _createParseMethod(LibraryContext ctx, ParserInfo info, Map<Method, Expre
       ..returns = resultRef
       ..body = Block(
         (builder) => builder
-          ..addExpression(methods.values.first.assignFinal('create'))
+          ..addExpression(createMethodInvocation.assignFinal('create'))
           ..addExpression(refer('validate').call([refer('source')]).assignFinal('result'))
           ..addExpression(refer('result').property('mapRight').call([refer('create')]).returned),
       ),

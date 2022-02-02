@@ -1,15 +1,13 @@
 import 'package:code_builder/code_builder.dart';
 
 import '../../utils/utils.dart';
-import '../analyzer/converter/converter.dart';
-import '../analyzer/create_method.dart';
+import '../analyzer/method.dart';
 import '../analyzer/parameter.dart';
 import '../analyzer/parser.dart';
-import '../opt.dart';
 import 'converter.dart';
 
-Method buildConvertMethod(LibraryContext ctx, MethodConverterWriteInfo info) {
-  final toRef = ctx.resolveDartType(info.to);
+Method buildMethod(LibraryContext ctx, MethodWriteInfo info) {
+  final toRef = ctx.resolveDartType(info.returnType);
   final bodyAllocator = info.body;
 
   final Code? body;
@@ -28,17 +26,6 @@ Method buildConvertMethod(LibraryContext ctx, MethodConverterWriteInfo info) {
   );
 }
 
-Method buildCreateMethod(LibraryContext ctx, ParserInfo info, CreateMethod method) {
-  final targetRef = ctx.resolveDartType(info.targetType);
-
-  return Method(
-    (builder) => builder
-      ..name = createInstanceMethodName
-      ..returns = targetRef
-      ..requiredParameters.addAll(_buildParameters(ctx, method.parameters)),
-  );
-}
-
 Iterable<Parameter> _buildParameters(LibraryContext ctx, List<MethodParameter> parameters) sync* {
   for (final param in parameters) {
     yield Parameter(
@@ -51,12 +38,12 @@ Iterable<Parameter> _buildParameters(LibraryContext ctx, List<MethodParameter> p
 
 Expression buildCreateMethodInvocation(LibraryContext ctx, ParserInfo info, CreateMethod method) {
   final targetRef = ctx.resolveDartType(info.targetType);
-  final args = buildArguments(method.parameters).join(', ');
+  final args = buildArguments(method.methodParameters).join(', ');
 
   return Method(
     (builder) => builder
       ..requiredParameters.add(Parameter((builder) => builder..name = '_'))
       ..returns = targetRef
-      ..body = Code('return $createInstanceMethodName($args);'),
+      ..body = Code('return ${method.methodName}($args);'),
   ).closure;
 }

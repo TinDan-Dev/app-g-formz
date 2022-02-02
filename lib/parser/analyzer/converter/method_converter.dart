@@ -5,12 +5,13 @@ import 'package:formz/annotation.dart';
 import 'package:source_gen/source_gen.dart';
 
 import '../../../utils/log.dart';
+import '../method.dart';
 import '../parameter.dart';
 import 'converter.dart';
 
 const _converterChecker = TypeChecker.fromRuntime(Convert);
 
-class MethodConverterInfo extends ConverterInfo implements MethodConverterWriteInfo {
+class MethodConverterInfo extends ConverterInfo implements MethodWriteInfo {
   @override
   final String methodName;
 
@@ -24,6 +25,9 @@ class MethodConverterInfo extends ConverterInfo implements MethodConverterWriteI
   }) : super(from: from, to: to);
 
   @override
+  DartType get returnType => to;
+
+  @override
   List<MethodParameter> get methodParameters => [
         MethodParameter('value', from),
         ...parameters,
@@ -33,7 +37,7 @@ class MethodConverterInfo extends ConverterInfo implements MethodConverterWriteI
   AllocateBody? get body => null;
 }
 
-class FieldMethodConverterInfo extends FieldConverterInfo implements MethodConverterWriteInfo {
+class FieldMethodConverterInfo extends FieldConverterInfo implements MethodWriteInfo {
   @override
   final String methodName;
 
@@ -46,6 +50,9 @@ class FieldMethodConverterInfo extends FieldConverterInfo implements MethodConve
     required DartType from,
     required DartType to,
   }) : super(fieldName: fieldName, from: from, to: to);
+
+  @override
+  DartType get returnType => to;
 
   @override
   List<MethodParameter> get methodParameters => parameters;

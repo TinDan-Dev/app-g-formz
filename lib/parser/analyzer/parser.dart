@@ -7,7 +7,6 @@ import '../../utils/log.dart';
 import '../opt.dart';
 import 'converter/converter.dart';
 import 'converter/method_converter.dart';
-import 'parameter.dart';
 
 const _validatorChecker = TypeChecker.fromUrl('$validatorURL#$validatorClass');
 
@@ -15,6 +14,8 @@ class ParserInfo {
   final ClassElement parser;
   final ClassElement target;
   final ClassElement source;
+
+  final bool useConstructor;
 
   final List<ConverterInfo> converters;
   final List<FieldConverterInfo> fieldConverters;
@@ -25,6 +26,7 @@ class ParserInfo {
     required this.source,
     required this.converters,
     required this.fieldConverters,
+    required this.useConstructor,
   });
 
   String get name => parser.name;
@@ -32,15 +34,6 @@ class ParserInfo {
   DartType get targetType => target.thisType;
 
   DartType get sourceType => source.thisType;
-
-  Iterable<MethodConverterWriteInfo> get methodConverter => converters
-      .whereType<MethodConverterWriteInfo>()
-      .followedBy(fieldConverters.whereType<MethodConverterWriteInfo>());
-
-  Iterable<List<MethodParameter>> get converterParameters => converters
-      .whereType<MethodConverterInfo>()
-      .map((e) => e.parameters)
-      .followedBy(fieldConverters.whereType<FieldMethodConverterInfo>().map((e) => e.parameters));
 }
 
 ParserInfo analyzeParser(Element element, ConstantReader annotation) {
@@ -63,6 +56,10 @@ ParserInfo analyzeParser(Element element, ConstantReader annotation) {
     error(null, 'Target should be a class');
   }
 
+  final useConstructor = annotation.read('useConstructor').boolValue;
+  final externConverter =
+      annotation.read('converter').listValue.map((e) => e.toFunctionValue()).whereNotNull().toList();
+
   final converterCollector = MethodConverterCollector();
   element.visitChildren(converterCollector);
 
@@ -72,5 +69,6 @@ ParserInfo analyzeParser(Element element, ConstantReader annotation) {
     parser: element,
     converters: converterCollector.converters,
     fieldConverters: converterCollector.fieldConverters,
+    useConstructor: useConstructor,
   );
 }

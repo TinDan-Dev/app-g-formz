@@ -1,8 +1,4 @@
 import 'package:analyzer/dart/element/type.dart';
-import 'package:code_builder/code_builder.dart';
-
-import '../../../utils/utils.dart';
-import '../parameter.dart';
 
 abstract class FieldConverterInfo extends ConverterInfo {
   final String fieldName;
@@ -22,17 +18,4 @@ abstract class ConverterInfo {
     required this.from,
     required this.to,
   });
-}
-
-typedef Allocate = String Function(Reference);
-
-typedef AllocateBody = String Function(LibraryContext ctx, Allocate allocate);
-
-abstract class MethodConverterWriteInfo {
-  DartType get to;
-  String get methodName;
-
-  List<MethodParameter> get methodParameters;
-
-  AllocateBody? get body;
 }

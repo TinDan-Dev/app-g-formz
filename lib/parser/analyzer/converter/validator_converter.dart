@@ -5,6 +5,7 @@ import 'package:source_gen/source_gen.dart';
 
 import '../../../utils/log.dart';
 import '../../../utils/utils.dart';
+import '../method.dart';
 import '../parameter.dart';
 import '../parser.dart';
 import '../rule.dart';
@@ -12,7 +13,7 @@ import 'converter.dart';
 
 const _parserChecker = TypeChecker.fromRuntime(Parser);
 
-class ValidatorConverterInfo extends FieldConverterInfo implements MethodConverterWriteInfo {
+class ValidatorConverterInfo extends FieldConverterInfo implements MethodWriteInfo {
   final ClassElement validator;
   final int index;
 
@@ -27,10 +28,16 @@ class ValidatorConverterInfo extends FieldConverterInfo implements MethodConvert
   DartType get validatorType => validator.thisType;
 
   @override
+  DartType get returnType => to;
+
+  @override
   String get methodName => '_${validator.name.toLowerCase()}';
 
   @override
   List<MethodParameter> get methodParameters => [MethodParameter('value', from)];
+
+  @override
+  List<MethodParameter> get parameters => [];
 
   @override
   AllocateBody? get body => (LibraryContext ctx, Allocate allocate) =>
