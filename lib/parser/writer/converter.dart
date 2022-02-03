@@ -1,13 +1,11 @@
 import 'package:meta/meta.dart';
 
 import '../../utils/utils.dart';
-import '../analyzer/converter/extern_converter.dart';
-import '../analyzer/converter/method_converter.dart';
-import '../analyzer/converter/validator_converter.dart';
+import '../analyzer/converter/converter.dart';
 import '../analyzer/method.dart';
-import '../analyzer/parameter.dart';
+import '../types.dart';
 
-Iterable<String> buildArguments(List<MethodParameter> parameter, LibraryContext ctx, Allocate allocate) sync* {
+Iterable<String> buildArguments(List<LParameter> parameter, LibraryContext ctx, Allocate allocate) sync* {
   for (final param in parameter) {
     var arg = 'source.${param.name}';
 
@@ -35,10 +33,16 @@ abstract class ArgumentConverter {
 }
 
 class NullCheckConverter extends ArgumentConverter {
-  const NullCheckConverter() : super(null);
+  final NullCheckConverterInfo info;
+
+  const NullCheckConverter(this.info) : super(null);
 
   @override
-  String apply(LibraryContext ctx, Allocate allocate, String parameter) => '${super.apply(ctx, allocate, parameter)}!';
+  String apply(LibraryContext ctx, Allocate allocate, String parameter) {
+    final ref = allocate(ctx.resolveLType(info.to));
+
+    return '${super.apply(ctx, allocate, parameter)} as $ref';
+  }
 }
 
 class MethodConverter extends ArgumentConverter {

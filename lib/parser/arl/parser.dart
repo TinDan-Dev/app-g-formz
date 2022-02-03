@@ -8,32 +8,50 @@ class ParserStepResult {
   final RootNode root;
   ARLNode node;
 
-  ParserStepResult({required this.root, required this.node});
+  ParserStepResult({required this.root}) : node = root;
+
+  void setOptional(ARLNode? node) {
+    if (node != null) {
+      this.node = node;
+    }
+  }
 }
 
 ARLNode parseRule(Element invocation) => _parseRule(invocation).node;
 
-ParserStepResult _parseRule(Element invocation) {
-  final target = invocation.realTarget;
-  if (target is! Element) {
-    if (target != null) {
-      warning(target, 'The target should be a method invocation or null');
-    }
-    return _parseRootNode(invocation);
-  }
+ParserStepResult _parseRule(Element invocation, [bool iterableRule = false]) {
+  final ParserStepResult prevResult;
 
-  final prevResult = _parseRule(target);
+  final target = invocation.target;
+  if (target is! Element) {
+    if (target is SimpleIdentifier && iterableRule) {
+      prevResult = ParserStepResult(root: IterableRootNode(target));
+    } else {
+      return _parseRootNode(target, invocation);
+    }
+  } else {
+    prevResult = _parseRule(target, iterableRule);
+  }
 
   switch (invocation.ruleMethodName) {
     case 'notNull':
       return prevResult..node = NullCheckNode(invocation, root: prevResult.root, child: prevResult.node);
 
-    case 'validator':
-      final result = _parseValidatorNode(invocation, prevResult);
-      if (result != null) {
-        prevResult.node = result;
-      }
+    case 'any':
+      return prevResult..setOptional(_parseIterableNode(invocation, prevResult, IterableCondition.any));
 
+    case 'none':
+      return prevResult..setOptional(_parseIterableNode(invocation, prevResult, IterableCondition.none));
+
+    case 'every':
+      return prevResult..setOptional(_parseIterableNode(invocation, prevResult, IterableCondition.every));
+
+    case 'validator':
+      return prevResult..setOptional(_parseValidatorNode(invocation, prevResult));
+
+    case 'iff':
+    case 'check':
+    case 'match':
       return prevResult;
 
     default:
@@ -42,7 +60,7 @@ ParserStepResult _parseRule(Element invocation) {
   }
 }
 
-ParserStepResult _parseRootNode(Element invocation) {
+ParserStepResult _parseRootNode(AstNode? target, Element invocation) {
   if (invocation.ruleMethodName != 'ruleFor') {
     final String? name;
     if (invocation.ruleMethodName == 'rule') {
@@ -52,8 +70,7 @@ ParserStepResult _parseRootNode(Element invocation) {
       warning(invocation, 'Unknown root node');
     }
 
-    final node = RootNode(invocation, name: name);
-    return ParserStepResult(node: node, root: node);
+    return ParserStepResult(root: RootNode(invocation, name: name));
   } else {
     final name = _ruleNameFromArgumentList(invocation.argumentList);
     final field = _fieldNameFromArgumentList(invocation.argumentList);
@@ -65,7 +82,7 @@ ParserStepResult _parseRootNode(Element invocation) {
       node = RootNode(invocation, name: name);
     }
 
-    return ParserStepResult(node: node, root: node);
+    return ParserStepResult(root: node);
   }
 }
 
@@ -140,6 +157,40 @@ ARLNode? _parseValidatorNode(Element invocation, ParserStepResult prevResult) {
   return ValidatorNode(
     invocation,
     validatorType: validatorType,
+    child: prevResult.node,
+    root: prevResult.root,
+  );
+}
+
+ARLNode? _parseIterableNode(Element invocation, ParserStepResult prevResult, IterableCondition condition) {
+  final args = invocation.argumentList.arguments;
+  if (args.length != 1) {
+    warning(invocation, 'Expected exactly one argument for the iterable rule');
+    return null;
+  }
+
+  final arg = invocation.argumentList.arguments[0];
+  if (arg is! FunctionExpression) {
+    warning(arg, 'Expected a function expression');
+    return null;
+  }
+
+  final body = arg.body;
+  if (body is! ExpressionFunctionBody) {
+    warning(body, 'Expected a expression function body');
+    return null;
+  }
+
+  final ruleAst = body.expression;
+  if (ruleAst is! Element) {
+    warning(body, 'Expected a method invocation');
+    return null;
+  }
+
+  return IterableNode(
+    invocation,
+    rule: _parseRule(ruleAst, true).node,
+    condition: condition,
     child: prevResult.node,
     root: prevResult.root,
   );

@@ -1,12 +1,11 @@
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/type.dart';
 import 'package:code_builder/code_builder.dart';
 import 'package:collection/collection.dart';
-import 'package:source_gen/source_gen.dart';
 
 import '../../utils/log.dart';
 import '../../utils/utils.dart';
 import '../opt.dart';
+import '../types.dart';
 import 'parameter.dart';
 import 'parser.dart';
 
@@ -17,15 +16,15 @@ typedef AllocateBody = String Function(LibraryContext ctx, Allocate allocate);
 abstract class MethodWriteInfo {
   String get methodName;
 
-  DartType get returnType;
+  LType get returnType;
 
   /// The parameters for the generated method, can be different from the
   /// parameters list.
-  List<MethodParameter> get methodParameters;
+  List<LParameter> get methodParameters;
 
   /// The parameters that require conversion, should be a subset from the
   /// method parameters.
-  List<MethodParameter> get parameters;
+  List<LParameter> get parameters;
 
   AllocateBody? get body;
 }
@@ -34,9 +33,9 @@ class CreateMethod implements MethodWriteInfo {
   @override
   final String methodName;
   @override
-  final DartType returnType;
+  final LType returnType;
   @override
-  final List<MethodParameter> methodParameters;
+  final List<LParameter> methodParameters;
   @override
   final AllocateBody? body;
 
@@ -48,7 +47,7 @@ class CreateMethod implements MethodWriteInfo {
   });
 
   @override
-  List<MethodParameter> get parameters => methodParameters;
+  List<LParameter> get parameters => methodParameters;
 }
 
 CreateMethod analyzeCreateMethod(ClassElement element, ParserInfo parser) {
@@ -58,7 +57,7 @@ CreateMethod analyzeCreateMethod(ClassElement element, ParserInfo parser) {
   }
 
   final createMethod = createMethods.first;
-  if (!TypeChecker.fromStatic(parser.targetType).isExactlyType(createMethod.returnType)) {
+  if (!LType.isExactly(parser.targetType, LType(createMethod.returnType))) {
     error(
       null,
       'The return type of the "$createInstanceMethodName" method should be: ${parser.target.getDisplayString(withNullability: false)}',
@@ -81,18 +80,18 @@ CreateMethod analyzeCreateConstructor(ParserInfo parser) {
     error(null, 'No unnamed constructor found for: ${parser.targetType}');
   }
 
-  final parameters = <MethodParameter>[];
+  final parameters = <LParameter>[];
   for (final param in constructor.parameters) {
     if (!param.isNamed) {
       error(null, 'Unnamed parameters are not supported for the constructor');
     }
 
-    parameters.add(MethodParameter(param.name, param.type));
+    parameters.add(LParameter(param.name, LType(param.type)));
   }
 
   final body = (LibraryContext ctx, Allocate allocate) {
     final buf = StringBuffer('return ');
-    buf.write(allocate(ctx.resolveDartType(parser.targetType)));
+    buf.write(allocate(ctx.resolveDartType(parser.targetType.type)));
     buf.write('(');
 
     for (final param in parameters) {

@@ -55,8 +55,17 @@ class Rule {
   /// Whether this rule includes a null check or not.
   final bool nullChecked;
 
-  /// The type of the validator used in this rule, or null of none was used.
+  /// The type of the validator used in this rule, if one was found.
   final DartType? validator;
+
+  /// The rule of the iterable, if one was found.
+  final Rule? iterableRule;
+
+  /// The condition of the iterable, if one was found.
+  final IterableCondition? iterableCondition;
+
+  /// Whether this is a rule inside of an iterable.
+  final bool inIterable;
 
   Rule._({
     required this.index,
@@ -66,6 +75,9 @@ class Rule {
     required this.fieldName,
     required this.nullChecked,
     required this.validator,
+    required this.iterableCondition,
+    required this.inIterable,
+    required this.iterableRule,
   });
 
   factory Rule.fromARL(ARLNode node, int index) {
@@ -80,6 +92,9 @@ class Rule {
       fieldName: analyzer.fieldName,
       nullChecked: analyzer.nullChecked,
       validator: analyzer.validator,
+      inIterable: analyzer.inIterable,
+      iterableCondition: analyzer.iterableCondition,
+      iterableRule: analyzer.iterableRule,
     );
   }
 }
@@ -91,12 +106,17 @@ class RuleAnalyzer extends ARLVisitor<void> {
   String? fieldName;
 
   bool nullChecked;
+  bool inIterable;
 
   DartType? validator;
 
+  Rule? iterableRule;
+  IterableCondition? iterableCondition;
+
   RuleAnalyzer()
       : nodeCount = 0,
-        nullChecked = false;
+        nullChecked = false,
+        inIterable = false;
 
   @override
   void visitAttachedNode(AttachedNode node, void args) {
@@ -128,8 +148,25 @@ class RuleAnalyzer extends ARLVisitor<void> {
   void visitValidatorNode(ValidatorNode node, void args) {
     if (validator != null) {
       warning(node.element, 'Seconde validator will be ignored, use a new rule for each validator');
+      return;
     }
 
     validator = node.validatorType;
+  }
+
+  @override
+  void visitIterableNode(IterableNode node, void args) {
+    if (iterableRule != null) {
+      warning(node.element, 'Seconde iterable rule will be ignored, use a new rule for each iterable rule');
+      return;
+    }
+
+    iterableRule = Rule.fromARL(node.rule, 0);
+    iterableCondition = node.condition;
+  }
+
+  @override
+  void visitIterableRootNode(IterableRootNode node, void args) {
+    inIterable = true;
   }
 }

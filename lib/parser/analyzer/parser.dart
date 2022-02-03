@@ -1,14 +1,12 @@
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/type.dart';
 import 'package:collection/collection.dart';
-import 'package:g_formz/parser/analyzer/converter/extern_converter.dart';
-import 'package:g_formz/utils/utils.dart';
 import 'package:source_gen/source_gen.dart';
 
 import '../../utils/log.dart';
+import '../../utils/utils.dart';
 import '../opt.dart';
+import '../types.dart';
 import 'converter/converter.dart';
-import 'converter/method_converter.dart';
 
 const _validatorChecker = TypeChecker.fromUrl('$validatorURL#$validatorClass');
 
@@ -19,23 +17,26 @@ class ParserInfo {
 
   final bool useConstructor;
 
-  final List<ConverterInfo> converters;
-  final List<FieldConverterInfo> fieldConverters;
+  final List<ConverterInfo> _converters;
 
   ParserInfo({
     required this.parser,
     required this.target,
     required this.source,
-    required this.converters,
-    required this.fieldConverters,
     required this.useConstructor,
-  });
+  }) : _converters = [];
+
+  Iterable<ConverterInfo> get converters => _converters.whereNot((e) => e is FieldConverterInfo);
+
+  Iterable<FieldConverterInfo> get fieldConverters => _converters.whereType<FieldConverterInfo>();
 
   String get name => parser.name;
 
-  DartType get targetType => target.thisType;
+  LType get targetType => LType(target.thisType);
 
-  DartType get sourceType => source.thisType;
+  LType get sourceType => LType(source.thisType);
+
+  void addConverters(Iterable<ConverterInfo> converters) => _converters.addAll(converters);
 }
 
 ParserInfo analyzeParser(LibraryContext ctx, Element element, ConstantReader annotation) {
@@ -60,23 +61,10 @@ ParserInfo analyzeParser(LibraryContext ctx, Element element, ConstantReader ann
 
   final useConstructor = annotation.read('useConstructor').boolValue;
 
-  final converters = <ConverterInfo>[];
-  final fieldConverters = <FieldConverterInfo>[];
-
-  final converterCollector = MethodConverterCollector(converters, fieldConverters);
-  element.visitChildren(converterCollector);
-
-  final externConverter =
-      annotation.read('converter').listValue.map((e) => e.toFunctionValue()).whereNotNull().toList();
-
-  converters.addAll(analyzeExternConverter(externConverter));
-
   return ParserInfo(
     source: source,
     target: target,
     parser: element,
-    converters: converterCollector.converters,
-    fieldConverters: converterCollector.fieldConverters,
     useConstructor: useConstructor,
   );
 }

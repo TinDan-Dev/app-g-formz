@@ -1,38 +1,26 @@
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/nullability_suffix.dart';
-import 'package:analyzer/dart/element/type.dart';
 import 'package:collection/collection.dart';
-import 'package:source_gen/source_gen.dart';
 
 import '../../utils/log.dart';
+import '../types.dart';
 import '../writer/converter.dart';
 import 'converter/converter.dart';
-import 'converter/extern_converter.dart';
-import 'converter/method_converter.dart';
-import 'converter/validator_converter.dart';
 import 'parser.dart';
-import 'rule.dart';
 
-class MethodParameter {
-  final String name;
-  final DartType type;
-
-  ArgumentConverter? converter;
-
-  MethodParameter(this.name, this.type);
-}
-
-Iterable<MethodParameter> fromParameterElements(Iterable<ParameterElement> parameters) sync* {
+Iterable<LParameter> fromParameterElements(Iterable<ParameterElement> parameters) sync* {
   for (final param in parameters) {
     if (param.isNamed) {
       error(null, 'Named parameters are not supported');
     }
 
-    yield MethodParameter(param.name, param.type);
+    yield LParameter(param.name, LType(param.type));
   }
 }
 
 ArgumentConverter? _fromConverter(ConverterInfo info, {ArgumentConverter? child}) {
+  if (info is NullCheckConverterInfo) {
+    return NullCheckConverter(info);
+  }
   if (info is MethodConverterInfo) {
     return MethodConverter(info, child: child);
   }
@@ -40,26 +28,13 @@ ArgumentConverter? _fromConverter(ConverterInfo info, {ArgumentConverter? child}
     return FieldMethodConverter(info, child: child);
   }
   if (info is ValidatorConverterInfo) {
-    return ValidatorConverter(info);
+    return ValidatorConverter(info, child: child);
   }
   if (info is ExternConverterInfo) {
-    return ExternConverter(info);
+    return ExternConverter(info, child: child);
   }
 
   return child;
-}
-
-bool _nullable(DartType type) => type.nullabilitySuffix == NullabilitySuffix.question;
-
-bool _typeAssignable(DartType to, DartType from, {bool nullability = false}) {
-  if (!TypeChecker.fromStatic(from).isAssignableFromType(to)) {
-    return false;
-  }
-  if (_nullable(to) || !nullability) {
-    return true;
-  }
-
-  return !_nullable(from);
 }
 
 class _NoResult implements Exception {
@@ -69,17 +44,15 @@ class _NoResult implements Exception {
 ArgumentConverter? _getConverterFor({
   required Iterable<ConverterInfo> converters,
   required Iterable<FieldConverterInfo> fieldConverters,
-  required DartType currentType,
-  required DartType requestedType,
-  required ArgumentConverter? childConverter,
-  bool nullChecked = false,
+  required LType currentType,
+  required LType requestedType,
+  ArgumentConverter? childConverter,
 }) {
-  if (_typeAssignable(currentType, requestedType, nullability: !nullChecked)) {
+  if (LType.assignable(requestedType, currentType, nullability: true)) {
     return childConverter;
   }
 
-  for (final converter
-      in fieldConverters.where((e) => _typeAssignable(currentType, e.from, nullability: !nullChecked))) {
+  for (final converter in fieldConverters.where((e) => LType.assignable(e.from, currentType, nullability: true))) {
     try {
       return _getConverterFor(
         converters: converters,
@@ -92,7 +65,7 @@ ArgumentConverter? _getConverterFor({
       continue;
     }
   }
-  for (final converter in converters.where((e) => _typeAssignable(currentType, e.from, nullability: !nullChecked))) {
+  for (final converter in converters.where((e) => LType.assignable(e.from, currentType, nullability: true))) {
     try {
       return _getConverterFor(
         converters: converters.whereNot((e) => e == converter),
@@ -109,44 +82,31 @@ ArgumentConverter? _getConverterFor({
   throw const _NoResult();
 }
 
-MethodParameter _addConverter(MethodParameter param, ParserInfo info, List<Rule> rules) {
+LParameter _addConverter(LParameter param, ParserInfo info) {
   final sourceField = info.source.getField(param.name);
   if (sourceField == null) {
     error(null, 'No field found for parameter: ${param.name}:${param.type}');
   }
 
+  final fieldType = LType(sourceField.type);
   final fieldConverter = info.fieldConverters.where((e) => e.fieldName == param.name);
 
   try {
-    if (_nullable(sourceField.type) && rules.any((e) => e.fieldName == param.name && e.nullChecked)) {
-      param.converter = _getConverterFor(
-        converters: info.converters,
-        fieldConverters: fieldConverter,
-        currentType: sourceField.type,
-        requestedType: param.type,
-        childConverter: const NullCheckConverter(),
-        nullChecked: true,
-      );
+    param.converter = _getConverterFor(
+      converters: info.converters,
+      fieldConverters: fieldConverter,
+      currentType: fieldType,
+      requestedType: param.type,
+    );
 
-      return param;
-    } else {
-      param.converter = _getConverterFor(
-        converters: info.converters,
-        fieldConverters: fieldConverter,
-        currentType: sourceField.type,
-        requestedType: param.type,
-        childConverter: null,
-      );
-
-      return param;
-    }
+    return param;
   } on _NoResult {
     error(null, 'Could not converter ${param.name}:${sourceField.type} to ${param.type}');
   }
 }
 
-void addParameterConverter(List<MethodParameter> parameters, ParserInfo info, List<Rule> rules) {
+void addParameterConverter(List<LParameter> parameters, ParserInfo info) {
   for (final param in parameters) {
-    _addConverter(param, info, rules);
+    _addConverter(param, info);
   }
 }

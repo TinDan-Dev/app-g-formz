@@ -18,10 +18,7 @@ abstract class ARLNode {
   ARLNode? get child;
 
   /// The method that node refers to.
-  final Element element;
-
-  /// The name of the method, retrieved from the element.
-  String get methodName => element.ruleMethodName;
+  final AstNode element;
 
   const ARLNode(this.element);
 
@@ -40,7 +37,7 @@ class RootNode extends ARLNode {
   /// The name of the rule, if the rule has a name.
   final String? name;
 
-  const RootNode(Element element, {this.name}) : super(element);
+  const RootNode(AstNode element, {this.name}) : super(element);
 
   @override
   void visit<T>(ARLVisitor<T> visitor, T args) => visitor.visitRootNode(this, args);
@@ -51,7 +48,7 @@ class FieldRootNode extends RootNode {
   /// The name of the accessed field.
   final String fieldName;
 
-  const FieldRootNode(Element element, {String? name, required this.fieldName}) : super(element, name: name);
+  const FieldRootNode(AstNode element, {String? name, required this.fieldName}) : super(element, name: name);
 
   @override
   void visit<T>(ARLVisitor<T> visitor, T args) {
@@ -75,6 +72,12 @@ class AttachedNode extends ARLNode {
     visitor.visitAttachedNode(this, args);
     child.visit(visitor, args);
   }
+
+  @override
+  Element get element => super.element as Element;
+
+  /// The name of the method, retrieved from the element.
+  String get methodName => element.ruleMethodName;
 }
 
 /// A node that checks that the input is not null.
@@ -106,15 +109,50 @@ class ValidatorNode extends AttachedNode {
   }
 }
 
+enum IterableCondition { every, any, none }
+
+class IterableRootNode extends RootNode {
+  IterableRootNode(AstNode element) : super(element);
+
+  @override
+  void visit<T>(ARLVisitor<T> visitor, T args) {
+    visitor.visitIterableRootNode(this, args);
+    super.visit(visitor, args);
+  }
+}
+
+class IterableNode extends AttachedNode {
+  final ARLNode rule;
+  final IterableCondition condition;
+
+  const IterableNode(
+    Element element, {
+    required this.rule,
+    required this.condition,
+    required ARLNode child,
+    required RootNode root,
+  }) : super(element, child: child, root: root);
+
+  @override
+  void visit<T>(ARLVisitor<T> visitor, T args) {
+    visitor.visitIterableNode(this, args);
+    super.visit(visitor, args);
+  }
+}
+
 /// A visitor that can walk down the ARL.
 abstract class ARLVisitor<T> {
   void visitRootNode(RootNode node, T args);
 
   void visitFieldRootNode(FieldRootNode node, T args);
 
+  void visitIterableRootNode(IterableRootNode node, T args);
+
   void visitAttachedNode(AttachedNode node, T args);
 
   void visitNullCheckNode(NullCheckNode node, T args);
 
   void visitValidatorNode(ValidatorNode node, T args);
+
+  void visitIterableNode(IterableNode node, T args);
 }

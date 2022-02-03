@@ -1,13 +1,4 @@
-import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/dart/element/visitor.dart';
-import 'package:formz/annotation.dart';
-import 'package:source_gen/source_gen.dart';
-
-import '../../../utils/log.dart';
-import '../method.dart';
-import '../parameter.dart';
-import 'converter.dart';
+part of 'converter.dart';
 
 const _converterChecker = TypeChecker.fromRuntime(Convert);
 
@@ -15,21 +6,21 @@ class MethodConverterInfo extends ConverterInfo implements MethodWriteInfo {
   @override
   final String methodName;
 
-  final List<MethodParameter> parameters;
+  final List<LParameter> parameters;
 
   const MethodConverterInfo({
     required this.methodName,
     required this.parameters,
-    required DartType from,
-    required DartType to,
+    required LType from,
+    required LType to,
   }) : super(from: from, to: to);
 
   @override
-  DartType get returnType => to;
+  LType get returnType => to;
 
   @override
-  List<MethodParameter> get methodParameters => [
-        MethodParameter('value', from),
+  List<LParameter> get methodParameters => [
+        LParameter('value', from),
         ...parameters,
       ];
 
@@ -41,31 +32,37 @@ class FieldMethodConverterInfo extends FieldConverterInfo implements MethodWrite
   @override
   final String methodName;
 
-  final List<MethodParameter> parameters;
+  final List<LParameter> parameters;
 
   const FieldMethodConverterInfo({
     required this.parameters,
     required this.methodName,
     required String fieldName,
-    required DartType from,
-    required DartType to,
+    required LType from,
+    required LType to,
   }) : super(fieldName: fieldName, from: from, to: to);
 
   @override
-  DartType get returnType => to;
+  LType get returnType => to;
 
   @override
-  List<MethodParameter> get methodParameters => parameters;
+  List<LParameter> get methodParameters => parameters;
 
   @override
   AllocateBody? get body => null;
 }
 
-class MethodConverterCollector extends SimpleElementVisitor<void> {
-  final List<ConverterInfo> converters;
-  final List<FieldConverterInfo> fieldConverters;
+Iterable<ConverterInfo> analyzeMethodConverter(ClassElement element) {
+  final collector = _MethodConverterCollector();
+  element.visitChildren(collector);
 
-  MethodConverterCollector(this.converters, this.fieldConverters);
+  return collector.converters;
+}
+
+class _MethodConverterCollector extends SimpleElementVisitor<void> {
+  final List<ConverterInfo> converters;
+
+  _MethodConverterCollector() : converters = [];
 
   @override
   void visitMethodElement(MethodElement node) {
@@ -85,16 +82,16 @@ class MethodConverterCollector extends SimpleElementVisitor<void> {
     if (fieldName.isNull) {
       converters.add(MethodConverterInfo(
         methodName: node.name,
-        from: param.type,
-        to: node.returnType,
+        from: LType(param.type),
+        to: LType(node.returnType),
         parameters: fromParameterElements(node.parameters.sublist(1)).toList(),
       ));
     } else {
-      fieldConverters.add(FieldMethodConverterInfo(
+      converters.add(FieldMethodConverterInfo(
         fieldName: fieldName.stringValue,
         methodName: node.name,
-        from: param.type,
-        to: node.returnType,
+        from: LType(param.type),
+        to: LType(node.returnType),
         parameters: fromParameterElements(node.parameters).toList(),
       ));
     }

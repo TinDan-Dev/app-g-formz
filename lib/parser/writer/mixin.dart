@@ -10,7 +10,7 @@ Mixin buildMixin(
   Expression createMethodInvocation,
   List<Method> methods,
 ) {
-  final sourceRef = ctx.resolveDartType(info.sourceType);
+  final sourceRef = ctx.resolveLType(info.sourceType);
 
   final validatorType = TypeReference(
     (builder) => builder
@@ -31,8 +31,8 @@ Mixin buildMixin(
 }
 
 Method _createParseMethod(LibraryContext ctx, ParserInfo info, Expression createMethodInvocation) {
-  final sourceRef = ctx.resolveDartType(info.sourceType);
-  final targetRef = ctx.resolveDartType(info.targetType);
+  final sourceRef = ctx.resolveLType(info.sourceType);
+  final targetRef = ctx.resolveLType(info.targetType);
 
   final resultRef = TypeReference(
     (builder) => builder

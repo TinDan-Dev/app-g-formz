@@ -1,15 +1,4 @@
-import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/type.dart';
-import 'package:formz/annotation.dart';
-import 'package:source_gen/source_gen.dart';
-
-import '../../../utils/log.dart';
-import '../../../utils/utils.dart';
-import '../method.dart';
-import '../parameter.dart';
-import '../parser.dart';
-import '../rule.dart';
-import 'converter.dart';
+part of 'converter.dart';
 
 const _parserChecker = TypeChecker.fromRuntime(Parser);
 
@@ -21,30 +10,30 @@ class ValidatorConverterInfo extends FieldConverterInfo implements MethodWriteIn
     required this.index,
     required this.validator,
     required String fieldName,
-    required DartType from,
-    required DartType to,
+    required LType from,
+    required LType to,
   }) : super(fieldName: fieldName, from: from, to: to);
 
-  DartType get validatorType => validator.thisType;
+  LType get validatorType => LType(validator.thisType);
 
   @override
-  DartType get returnType => to;
+  LType get returnType => to;
 
   @override
-  String get methodName => '_${validator.name.toLowerCase()}';
+  String get methodName => '_${fieldName.toLowerCase()}${validator.name.toLowerCase()}';
 
   @override
-  List<MethodParameter> get methodParameters => [MethodParameter('value', from)];
+  List<LParameter> get methodParameters => [LParameter('value', from)];
 
   @override
-  List<MethodParameter> get parameters => [];
+  List<LParameter> get parameters => [];
 
   @override
   AllocateBody? get body => (LibraryContext ctx, Allocate allocate) =>
       'return (rules[$index].getValidator() as $validatorType).parse(value).rightOrThrow();';
 }
 
-void addValidatorConvert(ParserInfo info, List<Rule> rules) {
+Iterable<ConverterInfo> analyzeValidatorConvert(ParserInfo info, List<Rule> rules) sync* {
   for (final rule in rules) {
     final validator = rule.validator;
     if (validator == null) {
@@ -76,12 +65,12 @@ void addValidatorConvert(ParserInfo info, List<Rule> rules) {
 
     final target = ConstantReader(annotation).read('target').typeValue;
 
-    info.fieldConverters.add(ValidatorConverterInfo(
+    yield ValidatorConverterInfo(
       index: rule.index,
       validator: validatorElement,
       fieldName: fieldName,
-      from: fieldType,
-      to: target,
-    ));
+      from: LType(fieldType),
+      to: LType(target),
+    );
   }
 }
