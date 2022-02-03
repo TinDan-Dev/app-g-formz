@@ -7,6 +7,7 @@ import 'package:build/build.dart';
 import 'package:code_builder/code_builder.dart';
 import 'package:collection/collection.dart';
 
+import '../parser/type.dart';
 import 'imports.dart';
 
 bool _isCoreDartType(Element? element) {
@@ -26,7 +27,9 @@ class LibraryContext {
   final List<LibraryElement> allLibraries;
   final LibraryElement? sourceLibrary;
 
-  LibraryContext(this.allLibraries, this.sourceLibrary);
+  final Map<int, LType> _lTypeCache;
+
+  LibraryContext(this.allLibraries, this.sourceLibrary) : _lTypeCache = {};
 
   /// Finds the library identifier for an element, if the element can be found
   /// and is not a core type.
@@ -99,6 +102,45 @@ class LibraryContext {
       ..url = _resolveImport(type.element)
       ..types.addAll(_resolveTypeArguments(type))
       ..isNullable = type.nullabilitySuffix == NullabilitySuffix.question);
+  }
+
+  LType resolveLType(DartType type) {
+    final name = _resolveDartTypeName(type);
+    final url = _resolveImport(type.element);
+    final prefix = _resolveDartTypePrefix(type.element);
+
+    final key = Object.hash(url, name);
+
+    final LType lType;
+    if (!_lTypeCache.containsKey(key)) {
+      final allSupertypes = <LType>[];
+
+      // register the type in the cache before resolving any super types to
+      // deal with cyclic super types / type arguments
+      lType = LType(
+        name: name,
+        url: url,
+        nullable: type.nullabilitySuffix == NullabilitySuffix.question,
+        allSupertypes: UnmodifiableListView(allSupertypes),
+      );
+      _lTypeCache[key] = lType;
+
+      if (type is InterfaceType) {
+        allSupertypes.addAll(type.allSupertypes.map(resolveLType));
+      }
+    } else {
+      lType = _lTypeCache[key]!;
+    }
+
+    final typeArguments = <LType>[];
+    if (type is ParameterizedType) {
+      typeArguments.addAll(type.typeArguments.map(resolveLType));
+    }
+
+    return lType.copyWith(
+      prefix: () => prefix,
+      typeArguments: () => typeArguments,
+    );
   }
 
   /// Resolves a function type.

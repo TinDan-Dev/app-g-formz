@@ -3,15 +3,10 @@ part of 'converter.dart';
 class ExternConverterInfo extends ConverterInfo {
   final ExecutableElement function;
 
-  ExternConverterInfo({
-    required this.function,
-  }) : super(
-          from: LType(function.parameters[0].type),
-          to: LType(function.returnType),
-        );
+  ExternConverterInfo({required this.function, required LType from, required LType to}) : super(from: from, to: to);
 }
 
-Iterable<ExternConverterInfo> analyzeExternConverter(ConstantReader annotation) sync* {
+Iterable<ExternConverterInfo> analyzeExternConverter(LibraryContext ctx, ConstantReader annotation) sync* {
   final elements = annotation.read('converter').listValue.map((e) => e.toFunctionValue()).whereNotNull().toList();
 
   for (final element in elements) {
@@ -23,6 +18,10 @@ Iterable<ExternConverterInfo> analyzeExternConverter(ConstantReader annotation) 
       error(null, 'Extern converter functions can only have unnamed argument, violated by: ${element.name}');
     }
 
-    yield ExternConverterInfo(function: element);
+    yield ExternConverterInfo(
+      function: element,
+      from: ctx.resolveLType(element.parameters[0].type),
+      to: ctx.resolveLType(element.returnType),
+    );
   }
 }

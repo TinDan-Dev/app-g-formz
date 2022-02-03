@@ -3,7 +3,6 @@ import 'package:code_builder/code_builder.dart';
 import '../../utils/utils.dart';
 import '../analyzer/method.dart';
 import '../analyzer/parser.dart';
-import '../types.dart';
 import 'converter.dart';
 
 final Allocate _allocate = (Reference ref) {
@@ -22,7 +21,7 @@ final Allocate _allocate = (Reference ref) {
 };
 
 Method buildMethod(LibraryContext ctx, MethodWriteInfo info) {
-  final toRef = ctx.resolveLType(info.returnType);
+  final toRef = info.returnType.ref;
   final bodyAllocator = info.body;
 
   final Code? body;
@@ -46,19 +45,18 @@ Iterable<Parameter> _buildParameters(LibraryContext ctx, List<LParameter> parame
     yield Parameter(
       (builder) => builder
         ..name = param.name
-        ..type = ctx.resolveLType(param.type),
+        ..type = param.type.ref,
     );
   }
 }
 
 Expression buildCreateMethodInvocation(LibraryContext ctx, ParserInfo info, CreateMethod method) {
-  final targetRef = ctx.resolveLType(info.targetType);
   final args = buildArguments(method.methodParameters, ctx, _allocate).join(', ');
 
   return Method(
     (builder) => builder
       ..requiredParameters.add(Parameter((builder) => builder..name = '_'))
-      ..returns = targetRef
+      ..returns = info.targetType.ref
       ..body = Code('return ${method.methodName}($args);'),
   ).closure;
 }

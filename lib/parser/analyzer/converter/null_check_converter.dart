@@ -7,7 +7,7 @@ class NullCheckConverterInfo extends FieldConverterInfo {
   }) : super(
           fieldName: fieldName,
           from: type,
-          to: type.notNullable,
+          to: type.copyWith(nullable: () => false),
         );
 }
 
@@ -18,11 +18,15 @@ class IterableNullCheckConverterInfo extends FieldConverterInfo implements NullC
   }) : super(
           fieldName: fieldName,
           from: type,
-          to: type.setNotNullableTypeArgument(0),
+          to: type.copyWith(typeArguments: () => [type.typeArguments[0].copyWith(nullable: () => false)]),
         );
 }
 
-Iterable<FieldConverterInfo> nullCheckConverterFromRules(ParserInfo info, Iterable<Rule> rules) sync* {
+Iterable<FieldConverterInfo> nullCheckConverterFromRules(
+  LibraryContext ctx,
+  ParserInfo info,
+  Iterable<Rule> rules,
+) sync* {
   for (final rule in rules) {
     final fieldName = rule.fieldName;
     if (fieldName == null) continue;
@@ -34,10 +38,10 @@ Iterable<FieldConverterInfo> nullCheckConverterFromRules(ParserInfo info, Iterab
     }
 
     if (rule.nullChecked) {
-      yield NullCheckConverterInfo(fieldName: rule.fieldName!, type: LType(field.type));
+      yield NullCheckConverterInfo(fieldName: rule.fieldName!, type: ctx.resolveLType(field.type));
     }
     if (rule.iterableRule != null && rule.iterableRule!.nullChecked) {
-      yield IterableNullCheckConverterInfo(fieldName: rule.fieldName!, type: LType(field.type));
+      yield IterableNullCheckConverterInfo(fieldName: rule.fieldName!, type: ctx.resolveLType(field.type));
     }
   }
 }

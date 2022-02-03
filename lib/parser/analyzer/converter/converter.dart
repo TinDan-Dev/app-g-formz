@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/visitor.dart';
 import 'package:collection/collection.dart';
 import 'package:formz/annotation.dart';
@@ -6,7 +7,7 @@ import 'package:source_gen/source_gen.dart';
 
 import '../../../utils/log.dart';
 import '../../../utils/utils.dart';
-import '../../types.dart';
+import '../../type.dart';
 import '../method.dart';
 import '../parameter.dart';
 import '../parser.dart';

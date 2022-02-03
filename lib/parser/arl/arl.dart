@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/element/type.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
@@ -93,11 +93,11 @@ class NullCheckNode extends AttachedNode {
 }
 
 class ValidatorNode extends AttachedNode {
-  final DartType validatorType;
+  final ClassElement validator;
 
   const ValidatorNode(
     Element element, {
-    required this.validatorType,
+    required this.validator,
     required ARLNode child,
     required RootNode root,
   }) : super(element, child: child, root: root);

@@ -149,14 +149,14 @@ ARLNode? _parseValidatorNode(Element invocation, ParserStepResult prevResult) {
     return null;
   }
 
-  final validatorType = args[0].staticType;
-  if (validatorType == null) {
+  final validator = args[0].staticType?.element;
+  if (validator is! ClassElement) {
     error(args[0], 'Could not determine type of validator');
   }
 
   return ValidatorNode(
     invocation,
-    validatorType: validatorType,
+    validator: validator,
     child: prevResult.node,
     root: prevResult.root,
   );

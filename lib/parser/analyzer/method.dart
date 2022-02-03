@@ -5,13 +5,23 @@ import 'package:collection/collection.dart';
 import '../../utils/log.dart';
 import '../../utils/utils.dart';
 import '../opt.dart';
-import '../types.dart';
+import '../type.dart';
+import '../writer/converter.dart';
 import 'parameter.dart';
 import 'parser.dart';
 
 typedef Allocate = String Function(Reference);
 
 typedef AllocateBody = String Function(LibraryContext ctx, Allocate allocate);
+
+class LParameter {
+  final String name;
+  final LType type;
+
+  ArgumentConverter? converter;
+
+  LParameter(this.name, this.type);
+}
 
 abstract class MethodWriteInfo {
   String get methodName;
@@ -50,21 +60,23 @@ class CreateMethod implements MethodWriteInfo {
   List<LParameter> get parameters => methodParameters;
 }
 
-CreateMethod analyzeCreateMethod(ClassElement element, ParserInfo parser) {
+CreateMethod analyzeCreateMethod(LibraryContext ctx, ParserInfo parser, ClassElement element) {
   final createMethods = element.methods.where((e) => e.name == createInstanceMethodName).toList();
   if (createMethods.isEmpty) {
     error(null, 'Implement the "$createInstanceMethodName" method signature before running the generator');
   }
 
   final createMethod = createMethods.first;
-  if (!LType.isExactly(parser.targetType, LType(createMethod.returnType))) {
+  final createMethodType = ctx.resolveLType(createMethod.returnType);
+
+  if (!LType.sameType(parser.targetType, createMethodType)) {
     error(
       null,
       'The return type of the "$createInstanceMethodName" method should be: ${parser.target.getDisplayString(withNullability: false)}',
     );
   }
 
-  final parameters = fromParameterElements(createMethod.parameters).toList();
+  final parameters = fromParameterElements(ctx, createMethod.parameters).toList();
 
   return CreateMethod(
     methodParameters: parameters,
@@ -74,7 +86,7 @@ CreateMethod analyzeCreateMethod(ClassElement element, ParserInfo parser) {
   );
 }
 
-CreateMethod analyzeCreateConstructor(ParserInfo parser) {
+CreateMethod analyzeCreateConstructor(LibraryContext ctx, ParserInfo parser) {
   final constructor = parser.target.constructors.firstWhereOrNull((e) => e.periodOffset == null);
   if (constructor == null) {
     error(null, 'No unnamed constructor found for: ${parser.targetType}');
@@ -86,12 +98,12 @@ CreateMethod analyzeCreateConstructor(ParserInfo parser) {
       error(null, 'Unnamed parameters are not supported for the constructor');
     }
 
-    parameters.add(LParameter(param.name, LType(param.type)));
+    parameters.add(LParameter(param.name, ctx.resolveLType(param.type)));
   }
 
   final body = (LibraryContext ctx, Allocate allocate) {
     final buf = StringBuffer('return ');
-    buf.write(allocate(ctx.resolveDartType(parser.targetType.type)));
+    buf.write(allocate(parser.targetType.ref));
     buf.write('(');
 
     for (final param in parameters) {

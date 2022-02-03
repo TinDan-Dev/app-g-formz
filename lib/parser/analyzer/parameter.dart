@@ -2,18 +2,20 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:collection/collection.dart';
 
 import '../../utils/log.dart';
-import '../types.dart';
+import '../../utils/utils.dart';
+import '../type.dart';
 import '../writer/converter.dart';
 import 'converter/converter.dart';
+import 'method.dart';
 import 'parser.dart';
 
-Iterable<LParameter> fromParameterElements(Iterable<ParameterElement> parameters) sync* {
+Iterable<LParameter> fromParameterElements(LibraryContext ctx, Iterable<ParameterElement> parameters) sync* {
   for (final param in parameters) {
     if (param.isNamed) {
       error(null, 'Named parameters are not supported');
     }
 
-    yield LParameter(param.name, LType(param.type));
+    yield LParameter(param.name, ctx.resolveLType(param.type));
   }
 }
 
@@ -83,12 +85,11 @@ ArgumentConverter? _getConverterFor({
 }
 
 LParameter _addConverter(LParameter param, ParserInfo info) {
-  final sourceField = info.source.getField(param.name);
-  if (sourceField == null) {
+  final fieldType = info.sourceFields[param.name];
+  if (fieldType == null) {
     error(null, 'No field found for parameter: ${param.name}:${param.type}');
   }
 
-  final fieldType = LType(sourceField.type);
   final fieldConverter = info.fieldConverters.where((e) => e.fieldName == param.name);
 
   try {
@@ -101,7 +102,7 @@ LParameter _addConverter(LParameter param, ParserInfo info) {
 
     return param;
   } on _NoResult {
-    error(null, 'Could not converter ${param.name}:${sourceField.type} to ${param.type}');
+    error(null, 'Could not converter ${param.name}:${fieldType} to ${param.type}');
   }
 }
 

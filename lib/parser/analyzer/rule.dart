@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/element/type.dart';
+import 'package:analyzer/dart/element/element.dart';
 
 import '../../utils/log.dart';
 import '../arl/arl.dart';
@@ -56,7 +56,7 @@ class Rule {
   final bool nullChecked;
 
   /// The type of the validator used in this rule, if one was found.
-  final DartType? validator;
+  final ClassElement? validator;
 
   /// The rule of the iterable, if one was found.
   final Rule? iterableRule;
@@ -108,7 +108,7 @@ class RuleAnalyzer extends ARLVisitor<void> {
   bool nullChecked;
   bool inIterable;
 
-  DartType? validator;
+  ClassElement? validator;
 
   Rule? iterableRule;
   IterableCondition? iterableCondition;
@@ -151,7 +151,7 @@ class RuleAnalyzer extends ARLVisitor<void> {
       return;
     }
 
-    validator = node.validatorType;
+    validator = node.validator;
   }
 
   @override

@@ -28,16 +28,16 @@ class ParserGenerator extends GeneratorForAnnotation<Parser> {
     final info = analyzeParser(ctx, element, annotation);
     final rules = analyzeRules(await buildStep.resolver.astNodeFor(element, resolve: true));
 
-    info.addConverters(nullCheckConverterFromRules(info, rules));
-    info.addConverters(analyzeExternConverter(annotation));
-    info.addConverters(analyzeMethodConverter(element as ClassElement));
-    info.addConverters(analyzeValidatorConvert(info, rules));
+    info.addConverters(nullCheckConverterFromRules(ctx, info, rules));
+    info.addConverters(analyzeExternConverter(ctx, annotation));
+    info.addConverters(analyzeMethodConverter(ctx, element as ClassElement));
+    info.addConverters(analyzeValidatorConvert(ctx, info, rules));
 
     final CreateMethod method;
     if (info.useConstructor) {
-      method = analyzeCreateConstructor(info);
+      method = analyzeCreateConstructor(ctx, info);
     } else {
-      method = analyzeCreateMethod(element, info);
+      method = analyzeCreateMethod(ctx, info, element);
     }
 
     final methods = <MethodWriteInfo>[method];

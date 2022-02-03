@@ -52,8 +52,8 @@ class FieldMethodConverterInfo extends FieldConverterInfo implements MethodWrite
   AllocateBody? get body => null;
 }
 
-Iterable<ConverterInfo> analyzeMethodConverter(ClassElement element) {
-  final collector = _MethodConverterCollector();
+Iterable<ConverterInfo> analyzeMethodConverter(LibraryContext ctx, ClassElement element) {
+  final collector = _MethodConverterCollector(ctx);
   element.visitChildren(collector);
 
   return collector.converters;
@@ -61,8 +61,9 @@ Iterable<ConverterInfo> analyzeMethodConverter(ClassElement element) {
 
 class _MethodConverterCollector extends SimpleElementVisitor<void> {
   final List<ConverterInfo> converters;
+  final LibraryContext ctx;
 
-  _MethodConverterCollector() : converters = [];
+  _MethodConverterCollector(this.ctx) : converters = [];
 
   @override
   void visitMethodElement(MethodElement node) {
@@ -82,17 +83,17 @@ class _MethodConverterCollector extends SimpleElementVisitor<void> {
     if (fieldName.isNull) {
       converters.add(MethodConverterInfo(
         methodName: node.name,
-        from: LType(param.type),
-        to: LType(node.returnType),
-        parameters: fromParameterElements(node.parameters.sublist(1)).toList(),
+        from: ctx.resolveLType(param.type),
+        to: ctx.resolveLType(node.returnType),
+        parameters: fromParameterElements(ctx, node.parameters.sublist(1)).toList(),
       ));
     } else {
       converters.add(FieldMethodConverterInfo(
         fieldName: fieldName.stringValue,
         methodName: node.name,
-        from: LType(param.type),
-        to: LType(node.returnType),
-        parameters: fromParameterElements(node.parameters).toList(),
+        from: ctx.resolveLType(param.type),
+        to: ctx.resolveLType(node.returnType),
+        parameters: fromParameterElements(ctx, node.parameters).toList(),
       ));
     }
   }

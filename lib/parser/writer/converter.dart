@@ -3,7 +3,6 @@ import 'package:meta/meta.dart';
 import '../../utils/utils.dart';
 import '../analyzer/converter/converter.dart';
 import '../analyzer/method.dart';
-import '../types.dart';
 
 Iterable<String> buildArguments(List<LParameter> parameter, LibraryContext ctx, Allocate allocate) sync* {
   for (final param in parameter) {
@@ -39,7 +38,7 @@ class NullCheckConverter extends ArgumentConverter {
 
   @override
   String apply(LibraryContext ctx, Allocate allocate, String parameter) {
-    final ref = allocate(ctx.resolveLType(info.to));
+    final ref = allocate(info.to.ref);
 
     return '${super.apply(ctx, allocate, parameter)} as $ref';
   }
