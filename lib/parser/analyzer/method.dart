@@ -1,12 +1,14 @@
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/visitor.dart';
 import 'package:code_builder/code_builder.dart';
 import 'package:collection/collection.dart';
+import 'package:formz/annotation.dart';
+import 'package:source_gen/source_gen.dart';
 
 import '../../utils/log.dart';
 import '../../utils/utils.dart';
 import '../opt.dart';
-import '../type.dart';
-import '../writer/converter.dart';
+import '../types/types.dart';
 import 'parameter.dart';
 import 'parser.dart';
 
@@ -14,14 +16,7 @@ typedef Allocate = String Function(Reference);
 
 typedef AllocateBody = String Function(LibraryContext ctx, Allocate allocate);
 
-class LParameter {
-  final String name;
-  final LType type;
-
-  ArgumentConverter? converter;
-
-  LParameter(this.name, this.type);
-}
+const _createChecker = TypeChecker.fromRuntime(Create);
 
 abstract class MethodWriteInfo {
   String get methodName;
@@ -39,7 +34,7 @@ abstract class MethodWriteInfo {
   AllocateBody? get body;
 }
 
-class CreateMethod implements MethodWriteInfo {
+class CreateMethod with LConditionMixin implements MethodWriteInfo {
   @override
   final String methodName;
   @override
@@ -49,41 +44,19 @@ class CreateMethod implements MethodWriteInfo {
   @override
   final AllocateBody? body;
 
+  @override
+  final String? ifCondition;
+
   CreateMethod({
     required this.methodName,
     required this.returnType,
     required this.methodParameters,
     required this.body,
+    required this.ifCondition,
   });
 
   @override
   List<LParameter> get parameters => methodParameters;
-}
-
-CreateMethod analyzeCreateMethod(LibraryContext ctx, ParserInfo parser, ClassElement element) {
-  final createMethods = element.methods.where((e) => e.name == createInstanceMethodName).toList();
-  if (createMethods.isEmpty) {
-    error(null, 'Implement the "$createInstanceMethodName" method signature before running the generator');
-  }
-
-  final createMethod = createMethods.first;
-  final createMethodType = ctx.resolveLType(createMethod.returnType);
-
-  if (!LType.sameType(parser.targetType, createMethodType)) {
-    error(
-      null,
-      'The return type of the "$createInstanceMethodName" method should be: ${parser.target.getDisplayString(withNullability: false)}',
-    );
-  }
-
-  final parameters = fromParameterElements(ctx, createMethod.parameters).toList();
-
-  return CreateMethod(
-    methodParameters: parameters,
-    methodName: createInstanceMethodName,
-    returnType: parser.targetType,
-    body: null,
-  );
 }
 
 CreateMethod analyzeCreateConstructor(LibraryContext ctx, ParserInfo parser) {
@@ -92,21 +65,14 @@ CreateMethod analyzeCreateConstructor(LibraryContext ctx, ParserInfo parser) {
     error(null, 'No unnamed constructor found for: ${parser.targetType}');
   }
 
-  final parameters = <LParameter>[];
-  for (final param in constructor.parameters) {
-    if (!param.isNamed) {
-      error(null, 'Unnamed parameters are not supported for the constructor');
-    }
-
-    parameters.add(LParameter(param.name, ctx.resolveLType(param.type)));
-  }
+  final params = fromParameterElements(ctx, constructor.parameters, allowNamed: true).toList();
 
   final body = (LibraryContext ctx, Allocate allocate) {
     final buf = StringBuffer('return ');
     buf.write(allocate(parser.targetType.ref));
     buf.write('(');
 
-    for (final param in parameters) {
+    for (final param in params) {
       buf.write(param.name);
       buf.write(': ');
       buf.write(param.name);
@@ -118,9 +84,55 @@ CreateMethod analyzeCreateConstructor(LibraryContext ctx, ParserInfo parser) {
   };
 
   return CreateMethod(
-    methodParameters: parameters,
+    methodParameters: params,
     methodName: '_$createInstanceMethodName',
     returnType: parser.targetType,
+    ifCondition: null,
     body: body,
   );
+}
+
+Iterable<CreateMethod> analyzeCreateMethod(LibraryContext ctx, ParserInfo parser, ClassElement element) {
+  final collector = _CreateMethodCollector(ctx, parser.targetType);
+  element.visitChildren(collector);
+
+  return collector.methods;
+}
+
+class _CreateMethodCollector extends SimpleElementVisitor<void> {
+  final List<CreateMethod> methods;
+
+  final LibraryContext ctx;
+  final LType targetType;
+
+  _CreateMethodCollector(this.ctx, this.targetType) : methods = [];
+
+  @override
+  void visitMethodElement(MethodElement node) {
+    final annotation = _createChecker.firstAnnotationOfExact(node, throwOnUnresolved: false);
+    if (annotation == null) {
+      return;
+    }
+
+    final createMethodType = ctx.resolveLType(node.returnType);
+    if (!LType.sameType(targetType, createMethodType)) {
+      error(
+        null,
+        'The return type of the "$createInstanceMethodName" method should be: $targetType',
+      );
+    }
+
+    final ifConditionField = ConstantReader(annotation).read('condition');
+    final ifCondition = ifConditionField.isNull ? null : ifConditionField.stringValue;
+
+    final parameters = fromParameterElements(ctx, node.parameters).toList();
+
+    methods.add(CreateMethod(
+      methodParameters: parameters,
+      methodName: createInstanceMethodName,
+      returnType: targetType,
+      ifCondition: ifCondition,
+      body: null,
+    ));
+  }
 }

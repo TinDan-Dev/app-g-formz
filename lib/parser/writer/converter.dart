@@ -1,18 +1,14 @@
-import 'package:meta/meta.dart';
-
-import '../../utils/utils.dart';
 import '../analyzer/converter/converter.dart';
-import '../analyzer/method.dart';
+import '../analyzer/parameter.dart';
+import '../types/types.dart';
 
-Iterable<String> buildArguments(List<LParameter> parameter, LibraryContext ctx, Allocate allocate) sync* {
+Iterable<String> buildArguments(BuildContext ctx, List<LParameter> parameter) sync* {
   for (final param in parameter) {
     var arg = 'source.${param.name}';
 
-    if (param.converter != null) {
-      arg = param.converter!.apply(ctx, allocate, arg);
-    }
+    final converter = getConverter(ctx, param);
 
-    yield arg;
+    yield converter.apply(ctx, arg);
   }
 }
 
@@ -21,14 +17,20 @@ abstract class ArgumentConverter {
 
   const ArgumentConverter(this.child);
 
-  @mustCallSuper
-  String apply(LibraryContext ctx, Allocate allocate, String parameter) {
+  String apply(BuildContext ctx, String parameter) {
     if (child != null) {
-      return child!.apply(ctx, allocate, parameter);
+      return child!.apply(ctx, parameter);
     } else {
       return parameter;
     }
   }
+}
+
+class NoConverter extends ArgumentConverter {
+  const NoConverter() : super(null);
+
+  @override
+  String apply(BuildContext ctx, String parameter) => parameter;
 }
 
 class NullCheckConverter extends ArgumentConverter {
@@ -37,10 +39,10 @@ class NullCheckConverter extends ArgumentConverter {
   const NullCheckConverter(this.info) : super(null);
 
   @override
-  String apply(LibraryContext ctx, Allocate allocate, String parameter) {
-    final ref = allocate(info.to.ref);
+  String apply(BuildContext ctx, String parameter) {
+    final ref = ctx.allocate(info.to.ref);
 
-    return '${super.apply(ctx, allocate, parameter)} as $ref';
+    return '${super.apply(ctx, parameter)} as $ref';
   }
 }
 
@@ -50,10 +52,10 @@ class MethodConverter extends ArgumentConverter {
   MethodConverter(this.info, {ArgumentConverter? child}) : super(child);
 
   @override
-  String apply(LibraryContext ctx, Allocate allocate, String parameter) {
+  String apply(BuildContext ctx, String parameter) {
     final params = [
-      super.apply(ctx, allocate, parameter),
-      ...buildArguments(info.parameters, ctx, allocate),
+      super.apply(ctx, parameter),
+      ...buildArguments(ctx, info.parameters),
     ].join(', ');
 
     return '${info.methodName}($params)';
@@ -66,10 +68,10 @@ class FieldMethodConverter extends ArgumentConverter {
   FieldMethodConverter(this.info, {ArgumentConverter? child}) : super(child);
 
   @override
-  String apply(LibraryContext ctx, Allocate allocate, String parameter) {
+  String apply(BuildContext ctx, String parameter) {
     final params = [
-      super.apply(ctx, allocate, parameter),
-      ...buildArguments(info.parameters.sublist(1), ctx, allocate),
+      super.apply(ctx, parameter),
+      ...buildArguments(ctx, info.parameters.sublist(1)),
     ].join(', ');
 
     return '${info.methodName}($params)';
@@ -82,8 +84,8 @@ class ValidatorConverter extends ArgumentConverter {
   ValidatorConverter(this.info, {ArgumentConverter? child}) : super(child);
 
   @override
-  String apply(LibraryContext ctx, Allocate allocate, String parameter) {
-    return '${info.methodName}(${super.apply(ctx, allocate, parameter)})';
+  String apply(BuildContext ctx, String parameter) {
+    return '${info.methodName}(${super.apply(ctx, parameter)})';
   }
 }
 
@@ -93,9 +95,20 @@ class ExternConverter extends ArgumentConverter {
   ExternConverter(this.info, {ArgumentConverter? child}) : super(child);
 
   @override
-  String apply(LibraryContext ctx, Allocate allocate, String parameter) {
-    final ref = allocate(ctx.resolveFunctionType(info.function));
+  String apply(BuildContext ctx, String parameter) {
+    final ref = ctx.allocate(ctx.libCtx.resolveFunctionType(info.function));
 
-    return '$ref(${super.apply(ctx, allocate, parameter)})';
+    return '$ref(${super.apply(ctx, parameter)})';
+  }
+}
+
+class IffConverter extends ArgumentConverter {
+  final int index;
+
+  const IffConverter(this.index, {ArgumentConverter? child}) : super(child);
+
+  @override
+  String apply(BuildContext ctx, String parameter) {
+    return 'rules[$index].getIfCondition()?.call(source) == true ? ${super.apply(ctx, parameter)} : null';
   }
 }

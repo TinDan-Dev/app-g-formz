@@ -21,7 +21,8 @@ class ValidatorConverterInfo extends FieldConverterInfo implements MethodWriteIn
     required String fieldName,
     required LType from,
     required LType to,
-  }) : super(fieldName: fieldName, from: from, to: to);
+    required String? ifCondition,
+  }) : super(fieldName: fieldName, from: from, to: to, ifCondition: ifCondition);
 
   @override
   LType get returnType => to;
@@ -30,7 +31,7 @@ class ValidatorConverterInfo extends FieldConverterInfo implements MethodWriteIn
   String get methodName => '_${fieldName.toLowerCase()}${validator.name.toLowerCase()}';
 
   @override
-  List<LParameter> get methodParameters => [LParameter('value', from)];
+  List<LParameter> get methodParameters => [LParameter(name: 'value', type: from, ifCondition: null)];
 
   @override
   List<LParameter> get parameters => [];
@@ -50,12 +51,14 @@ class IterableValidatorConverterInfo extends ValidatorConverterInfo {
     required String fieldName,
     required LType from,
     required LType to,
+    required String? ifCondition,
   }) : super(
           fieldName: fieldName,
           from: from,
           to: to,
           validator: validator,
           index: index,
+          ifCondition: ifCondition,
         );
 
   @override
@@ -69,7 +72,12 @@ class IterableValidatorConverterInfo extends ValidatorConverterInfo {
       };
 }
 
-Iterable<ConverterInfo> analyzeValidatorConvert(LibraryContext ctx, ParserInfo info, List<Rule> rules) sync* {
+Iterable<ConverterInfo> analyzeValidatorConvert(
+  LibraryContext ctx,
+  ParserInfo info,
+  List<Rule> rules,
+  String? ifCondition,
+) sync* {
   for (final rule in rules) {
     final result = _analyzeValidator(rule.fieldName, rule.validator, info.source);
     if (result != null) {
@@ -79,6 +87,7 @@ Iterable<ConverterInfo> analyzeValidatorConvert(LibraryContext ctx, ParserInfo i
         fieldName: result.fieldName,
         from: ctx.resolveLType(result.fieldType),
         to: ctx.resolveLType(result.targetType),
+        ifCondition: ifCondition,
       );
     }
 
@@ -93,7 +102,16 @@ Iterable<ConverterInfo> analyzeValidatorConvert(LibraryContext ctx, ParserInfo i
         fieldName: iterableResult.fieldName,
         from: from,
         to: to,
+        ifCondition: ifCondition,
       );
+    }
+
+    if (rule.hasCondition) {
+      if (ifCondition != null) {
+        error(null, 'Nested if conditions are not supported');
+      }
+
+      yield* analyzeValidatorConvert(ctx, info, rule.ifRules, rule.ifCondition);
     }
   }
 }

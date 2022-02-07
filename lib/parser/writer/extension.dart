@@ -6,7 +6,7 @@ import '../analyzer/parser.dart';
 import '../opt.dart';
 
 Extension buildExtension(LibraryContext ctx, ParserInfo info, ClassElement element) {
-  final sourceRef = info.sourceType.ref;
+  final sourceRef = info.sourceType.copyWith(nullable: () => true).ref;
   final targetRef = info.targetType.ref;
   final validator = ctx.resolveDartType(element.thisType);
 

@@ -5,7 +5,7 @@ import 'package:source_gen/source_gen.dart';
 import '../../utils/log.dart';
 import '../../utils/utils.dart';
 import '../opt.dart';
-import '../type.dart';
+import '../types/types.dart';
 import 'converter/converter.dart';
 
 const _validatorChecker = TypeChecker.fromUrl('$validatorURL#$validatorClass');

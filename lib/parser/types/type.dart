@@ -1,7 +1,4 @@
-import 'dart:math';
-
-import 'package:code_builder/code_builder.dart';
-import 'package:collection/collection.dart';
+part of 'types.dart';
 
 bool _nullableAssignable(LType to, LType from) {
   if (to.nullable) {
@@ -14,6 +11,8 @@ bool _nullableAssignable(LType to, LType from) {
 bool _sameType(LType a, LType b) => a.name == b.name && a.url == b.url;
 
 bool _assignable(LType to, LType from, bool nullability) {
+  if (_sameType(to, LType.dynamic) || _sameType(from, LType.dynamic)) return true;
+
   final matchingType = [from, ...from.allSupertypes].firstWhereOrNull((e) => _sameType(to, e));
   if (matchingType == null) {
     return false;
@@ -48,6 +47,8 @@ class LType {
 
   static bool assignable(LType to, LType from, {bool nullability = false}) => _assignable(to, from, nullability);
 
+  static const dynamic = LType(name: 'dynamic', url: 'dart:dynamic');
+
   final bool nullable;
   final List<LType> typeArguments;
   final List<LType> allSupertypes;
@@ -57,7 +58,7 @@ class LType {
 
   final String name;
 
-  LType({
+  const LType({
     required this.name,
     this.nullable = false,
     this.typeArguments = const [],
@@ -103,6 +104,10 @@ class LType {
       buf.write('<');
       buf.write(typeArguments.join(', '));
       buf.write('>');
+    }
+
+    if (nullable) {
+      buf.write('?');
     }
 
     return buf.toString();

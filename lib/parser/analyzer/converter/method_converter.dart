@@ -13,14 +13,14 @@ class MethodConverterInfo extends ConverterInfo implements MethodWriteInfo {
     required this.parameters,
     required LType from,
     required LType to,
-  }) : super(from: from, to: to);
+  }) : super(from: from, to: to, ifCondition: null);
 
   @override
   LType get returnType => to;
 
   @override
   List<LParameter> get methodParameters => [
-        LParameter('value', from),
+        LParameter(name: 'value', type: from, ifCondition: null),
         ...parameters,
       ];
 
@@ -40,7 +40,7 @@ class FieldMethodConverterInfo extends FieldConverterInfo implements MethodWrite
     required String fieldName,
     required LType from,
     required LType to,
-  }) : super(fieldName: fieldName, from: from, to: to);
+  }) : super(fieldName: fieldName, from: from, to: to, ifCondition: null);
 
   @override
   LType get returnType => to;
@@ -75,17 +75,24 @@ class _MethodConverterCollector extends SimpleElementVisitor<void> {
     final params = node.parameters;
     if (params.isEmpty) {
       warning(null, 'Converter method ${node.name} has no parameters, at least on is required');
+      return;
     }
 
     final param = params[0];
     final fieldName = ConstantReader(annotation).read('fieldName');
+
+    final lParams = fromParameterElements(ctx, params).toList();
+    if (lParams.first.ifCondition != null) {
+      warning(null, 'The first parameter of a method converter cannot have a condition.');
+      return;
+    }
 
     if (fieldName.isNull) {
       converters.add(MethodConverterInfo(
         methodName: node.name,
         from: ctx.resolveLType(param.type),
         to: ctx.resolveLType(node.returnType),
-        parameters: fromParameterElements(ctx, node.parameters.sublist(1)).toList(),
+        parameters: lParams.sublist(1),
       ));
     } else {
       converters.add(FieldMethodConverterInfo(
@@ -93,7 +100,7 @@ class _MethodConverterCollector extends SimpleElementVisitor<void> {
         methodName: node.name,
         from: ctx.resolveLType(param.type),
         to: ctx.resolveLType(node.returnType),
-        parameters: fromParameterElements(ctx, node.parameters).toList(),
+        parameters: lParams,
       ));
     }
   }

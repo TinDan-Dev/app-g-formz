@@ -7,7 +7,7 @@ import 'package:source_gen/source_gen.dart';
 
 import '../../../utils/log.dart';
 import '../../../utils/utils.dart';
-import '../../type.dart';
+import '../../types/types.dart';
 import '../method.dart';
 import '../parameter.dart';
 import '../parser.dart';
@@ -24,16 +24,21 @@ abstract class FieldConverterInfo extends ConverterInfo {
   const FieldConverterInfo({
     required LType from,
     required LType to,
+    required String? ifCondition,
     required this.fieldName,
-  }) : super(from: from, to: to);
+  }) : super(from: from, to: to, ifCondition: ifCondition);
 }
 
-abstract class ConverterInfo {
+abstract class ConverterInfo with LConditionMixin {
   final LType from;
   final LType to;
+
+  @override
+  final String? ifCondition;
 
   const ConverterInfo({
     required this.from,
     required this.to,
+    required this.ifCondition,
   });
 }

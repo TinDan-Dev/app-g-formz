@@ -57,6 +57,20 @@ class FieldRootNode extends RootNode {
   }
 }
 
+/// If the root node specifies an if statement.
+class IfRootNode extends RootNode {
+  /// The rules to apply if the condition is true.
+  final List<ARLNode> rules;
+
+  const IfRootNode(AstNode element, {String? name, required this.rules}) : super(element, name: name);
+
+  @override
+  void visit<T>(ARLVisitor<T> visitor, T args) {
+    visitor.visitIfRootNode(this, args);
+    super.visit(visitor, args);
+  }
+}
+
 /// A node that is attached to a root node or another attached node.
 class AttachedNode extends ARLNode {
   @override
@@ -147,6 +161,8 @@ abstract class ARLVisitor<T> {
   void visitFieldRootNode(FieldRootNode node, T args);
 
   void visitIterableRootNode(IterableRootNode node, T args);
+
+  void visitIfRootNode(IfRootNode node, T args);
 
   void visitAttachedNode(AttachedNode node, T args);
 

@@ -27,7 +27,7 @@ ParserStepResult _parseRule(Element invocation, [bool iterableRule = false]) {
     if (target is SimpleIdentifier && iterableRule) {
       prevResult = ParserStepResult(root: IterableRootNode(target));
     } else {
-      return _parseRootNode(target, invocation);
+      return ParserStepResult(root: _parseRootNode(target, invocation));
     }
   } else {
     prevResult = _parseRule(target, iterableRule);
@@ -49,7 +49,6 @@ ParserStepResult _parseRule(Element invocation, [bool iterableRule = false]) {
     case 'validator':
       return prevResult..setOptional(_parseValidatorNode(invocation, prevResult));
 
-    case 'iff':
     case 'check':
     case 'match':
       return prevResult;
@@ -60,45 +59,47 @@ ParserStepResult _parseRule(Element invocation, [bool iterableRule = false]) {
   }
 }
 
-ParserStepResult _parseRootNode(AstNode? target, Element invocation) {
-  if (invocation.ruleMethodName != 'ruleFor') {
-    final String? name;
-    if (invocation.ruleMethodName == 'rule') {
-      name = _ruleNameFromArgumentList(invocation.argumentList);
-    } else {
-      name = null;
+RootNode _parseRootNode(AstNode? target, Element invocation) {
+  final name = _ruleNameFromArgumentList(invocation.argumentList);
+
+  switch (invocation.ruleMethodName) {
+    case 'ruleFor':
+      final field = _fieldNameFromArgumentList(invocation.argumentList);
+
+      if (field != null) {
+        return FieldRootNode(invocation, fieldName: field, name: name);
+      } else {
+        continue fallback;
+      }
+
+    case 'ruleIf':
+      final rules = _ifRulesFromArgumentList(invocation.argumentList);
+
+      if (rules != null && rules.isNotEmpty) {
+        return IfRootNode(invocation, rules: rules, name: name);
+      } else {
+        continue fallback;
+      }
+
+    fallback:
+    case 'rule':
+      return RootNode(invocation, name: name);
+    default:
       warning(invocation, 'Unknown root node');
-    }
-
-    return ParserStepResult(root: RootNode(invocation, name: name));
-  } else {
-    final name = _ruleNameFromArgumentList(invocation.argumentList);
-    final field = _fieldNameFromArgumentList(invocation.argumentList);
-
-    final RootNode node;
-    if (field != null) {
-      node = FieldRootNode(invocation, fieldName: field, name: name);
-    } else {
-      node = RootNode(invocation, name: name);
-    }
-
-    return ParserStepResult(root: node);
+      continue fallback;
   }
 }
 
 String? _ruleNameFromArgumentList(ArgumentList list) {
-  for (final element in list.arguments) {
-    if (element is NamedExpression && element.name.toString().startsWith('name')) {
-      final expression = element.expression;
-      if (expression is SimpleStringLiteral) {
-        return expression.value;
-      } else {
-        warning(element, 'Name will be ignored, not a simple string literal');
-      }
-    }
+  final expression = list.arguments
+      .whereType<NamedExpression>()
+      .firstWhereOrNull((e) => e.name.toString().startsWith('name'))
+      ?.expression;
+  if (expression is! SimpleStringLiteral) {
+    return null;
   }
 
-  return null;
+  return expression.value;
 }
 
 String? _fieldNameFromArgumentList(ArgumentList list) {
@@ -139,6 +140,18 @@ String? _fieldNameFromArgumentList(ArgumentList list) {
   }
 
   return expression.identifier.name;
+}
+
+List<ARLNode>? _ifRulesFromArgumentList(ArgumentList list) {
+  final expression = list.arguments
+      .whereType<NamedExpression>()
+      .firstWhereOrNull((e) => e.name.toString().startsWith('rules'))
+      ?.expression;
+  if (expression is! ListLiteral) {
+    return null;
+  }
+
+  return expression.elements.whereType<Element>().map(parseRule).toList();
 }
 
 ARLNode? _parseValidatorNode(Element invocation, ParserStepResult prevResult) {

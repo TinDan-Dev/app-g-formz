@@ -3,7 +3,8 @@ part of 'converter.dart';
 class ExternConverterInfo extends ConverterInfo {
   final ExecutableElement function;
 
-  ExternConverterInfo({required this.function, required LType from, required LType to}) : super(from: from, to: to);
+  ExternConverterInfo({required this.function, required LType from, required LType to})
+      : super(from: from, to: to, ifCondition: null);
 }
 
 Iterable<ExternConverterInfo> analyzeExternConverter(LibraryContext ctx, ConstantReader annotation) sync* {

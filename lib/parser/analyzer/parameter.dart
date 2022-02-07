@@ -1,21 +1,40 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:collection/collection.dart';
+import 'package:formz/annotation.dart';
+import 'package:source_gen/source_gen.dart';
 
 import '../../utils/log.dart';
 import '../../utils/utils.dart';
-import '../type.dart';
+import '../types/types.dart';
 import '../writer/converter.dart';
 import 'converter/converter.dart';
-import 'method.dart';
-import 'parser.dart';
 
-Iterable<LParameter> fromParameterElements(LibraryContext ctx, Iterable<ParameterElement> parameters) sync* {
+const _iffChecker = TypeChecker.fromRuntime(Iff);
+
+Iterable<LParameter> fromParameterElements(
+  LibraryContext ctx,
+  Iterable<ParameterElement> parameters, {
+  bool allowNamed = false,
+}) sync* {
   for (final param in parameters) {
-    if (param.isNamed) {
+    if (!allowNamed && param.isNamed) {
       error(null, 'Named parameters are not supported');
     }
 
-    yield LParameter(param.name, ctx.resolveLType(param.type));
+    final annotation = _iffChecker.firstAnnotationOfExact(param, throwOnUnresolved: false);
+    final String? ifCondition;
+
+    if (annotation != null) {
+      ifCondition = ConstantReader(annotation).read('condition').stringValue;
+    } else {
+      ifCondition = null;
+    }
+
+    yield LParameter(
+      name: param.name,
+      type: ctx.resolveLType(param.type),
+      ifCondition: ifCondition,
+    );
   }
 }
 
@@ -84,30 +103,38 @@ ArgumentConverter? _getConverterFor({
   throw const _NoResult();
 }
 
-LParameter _addConverter(LParameter param, ParserInfo info) {
-  final fieldType = info.sourceFields[param.name];
+ArgumentConverter _getConverter(BuildContext ctx, LParameter param) {
+  final fieldType = ctx.info.sourceFields[param.name];
   if (fieldType == null) {
     error(null, 'No field found for parameter: ${param.name}:${param.type}');
   }
 
-  final fieldConverter = info.fieldConverters.where((e) => e.fieldName == param.name);
+  final fieldConverters = ctx.info.fieldConverters
+      .where((e) => e.fieldName == param.name)
+      .where((e) => e.availableForCondition(ctx.conditions));
+
+  final converters = ctx.info.converters.where((e) => e.availableForCondition(ctx.conditions));
 
   try {
-    param.converter = _getConverterFor(
-      converters: info.converters,
-      fieldConverters: fieldConverter,
+    final converter = _getConverterFor(
+      converters: converters,
+      fieldConverters: fieldConverters,
       currentType: fieldType,
       requestedType: param.type,
     );
 
-    return param;
+    return converter ?? const NoConverter();
   } on _NoResult {
     error(null, 'Could not converter ${param.name}:${fieldType} to ${param.type}');
   }
 }
 
-void addParameterConverter(List<LParameter> parameters, ParserInfo info) {
-  for (final param in parameters) {
-    _addConverter(param, info);
+ArgumentConverter getConverter(BuildContext ctx, LParameter param) {
+  if (param.hasCondition) {
+    final index = ctx.getIndexOfRuleForCondition(param.ifCondition!);
+
+    return IffConverter(index, child: _getConverter(ctx.withCondition([param.ifCondition!]), param));
+  } else {
+    return _getConverter(ctx, param);
   }
 }

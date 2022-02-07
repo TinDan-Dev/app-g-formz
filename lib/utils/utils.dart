@@ -7,7 +7,7 @@ import 'package:build/build.dart';
 import 'package:code_builder/code_builder.dart';
 import 'package:collection/collection.dart';
 
-import '../parser/type.dart';
+import '../parser/types/types.dart';
 import 'imports.dart';
 
 bool _isCoreDartType(Element? element) {
@@ -120,7 +120,6 @@ class LibraryContext {
       lType = LType(
         name: name,
         url: url,
-        nullable: type.nullabilitySuffix == NullabilitySuffix.question,
         allSupertypes: UnmodifiableListView(allSupertypes),
       );
       _lTypeCache[key] = lType;
@@ -139,6 +138,7 @@ class LibraryContext {
 
     return lType.copyWith(
       prefix: () => prefix,
+      nullable: () => type.nullabilitySuffix == NullabilitySuffix.question,
       typeArguments: () => typeArguments,
     );
   }

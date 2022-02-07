@@ -1,16 +1,14 @@
 import 'package:code_builder/code_builder.dart';
+import 'package:collection/collection.dart';
 
-import '../../utils/utils.dart';
-import '../analyzer/parser.dart';
+import '../../utils/log.dart';
+import '../analyzer/method.dart';
 import '../opt.dart';
+import '../types/types.dart';
+import 'method.dart';
 
-Mixin buildMixin(
-  LibraryContext ctx,
-  ParserInfo info,
-  Expression createMethodInvocation,
-  List<Method> methods,
-) {
-  final sourceRef = info.sourceType.ref;
+Mixin buildMixin(BuildContext ctx, List<MethodWriteInfo> methods) {
+  final sourceRef = ctx.info.sourceType.ref;
 
   final validatorType = TypeReference(
     (builder) => builder
@@ -19,20 +17,20 @@ Mixin buildMixin(
       ..types.add(sourceRef),
   );
 
-  final parseMethod = _createParseMethod(ctx, info, createMethodInvocation);
+  final parseMethod = _createParseMethod(ctx, methods.whereType<CreateMethod>());
 
   return Mixin(
     (builder) => builder
-      ..name = '_\$${info.name}'
+      ..name = '_\$${ctx.info.name}'
       ..on = validatorType
-      ..methods.addAll(methods)
+      ..methods.addAll(methods.map((e) => buildMethod(ctx, e)))
       ..methods.add(parseMethod),
   );
 }
 
-Method _createParseMethod(LibraryContext ctx, ParserInfo info, Expression createMethodInvocation) {
-  final sourceRef = info.sourceType.ref;
-  final targetRef = info.targetType.ref;
+Method _createParseMethod(BuildContext ctx, Iterable<CreateMethod> methods) {
+  final sourceRef = ctx.info.sourceType.copyWith(nullable: () => true).ref;
+  final targetRef = ctx.info.targetType.ref;
 
   final resultRef = TypeReference(
     (builder) => builder
@@ -40,6 +38,37 @@ Method _createParseMethod(LibraryContext ctx, ParserInfo info, Expression create
       ..url = resultURL
       ..types.add(targetRef),
   );
+
+  final buf = StringBuffer();
+  buf.writeln('if (source == null) {');
+  buf.writeln('   return Result.left(Failure(message: \'Input for ${ctx.info.name} was null\'));');
+  buf.writeln('}');
+
+  buf.writeln('return validate(source).mapRight((_) {');
+
+  for (final m in methods.where((e) => e.hasCondition)) {
+    final rule = ctx.rules.firstWhereOrNull((e) => e.ifCondition == m.ifCondition);
+    if (rule == null) {
+      warning(null, 'Could not find rule for condition: ${m.ifCondition}');
+      continue;
+    }
+
+    final invocation = buildCreateMethodInvocation(ctx.withCondition([m.ifCondition!]), m);
+
+    buf.writeln('if(rules[${rule.index}].getIfCondition()?.call(source) == true) {');
+    buf.writeln('return $invocation;');
+    buf.writeln('}');
+  }
+
+  final m = methods.where((e) => !e.hasCondition).firstOrNull;
+  if (m == null) {
+    error(null, 'No default create method found');
+  }
+
+  final invocation = buildCreateMethodInvocation(ctx, m);
+  buf.writeln('return $invocation;');
+
+  buf.writeln('});');
 
   return Method(
     (builder) => builder
@@ -50,11 +79,6 @@ Method _createParseMethod(LibraryContext ctx, ParserInfo info, Expression create
           ..type = sourceRef,
       ))
       ..returns = resultRef
-      ..body = Block(
-        (builder) => builder
-          ..addExpression(createMethodInvocation.assignFinal('create'))
-          ..addExpression(refer('validate').call([refer('source')]).assignFinal('result'))
-          ..addExpression(refer('result').property('mapRight').call([refer('create')]).returned),
-      ),
+      ..body = Code(buf.toString()),
   );
 }

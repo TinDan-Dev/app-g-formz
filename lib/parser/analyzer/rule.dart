@@ -1,6 +1,8 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:collection/collection.dart';
 
+import '../../parser/types/types.dart';
 import '../../utils/log.dart';
 import '../arl/arl.dart';
 
@@ -36,7 +38,7 @@ List<Rule> analyzeRules(AstNode? ast) {
   return rules;
 }
 
-class Rule {
+class Rule with LConditionMixin {
   /// The index of this rule.
   final int index;
 
@@ -67,6 +69,10 @@ class Rule {
   /// Whether this is a rule inside of an iterable.
   final bool inIterable;
 
+  /// If this rule is an if rule, theses are the rules that should be valid
+  /// if the condition holds.
+  final List<Rule> ifRules;
+
   Rule._({
     required this.index,
     required this.node,
@@ -78,6 +84,7 @@ class Rule {
     required this.iterableCondition,
     required this.inIterable,
     required this.iterableRule,
+    required this.ifRules,
   });
 
   factory Rule.fromARL(ARLNode node, int index) {
@@ -95,8 +102,16 @@ class Rule {
       inIterable: analyzer.inIterable,
       iterableCondition: analyzer.iterableCondition,
       iterableRule: analyzer.iterableRule,
+      ifRules: analyzer.ifRules,
     );
   }
+
+  /// Whether this is an if rule.
+  bool get isIfRule => ifRules.isNotEmpty;
+
+  /// The name of the if condition if this rule is an if rule.
+  @override
+  String? get ifCondition => isIfRule ? name : null;
 }
 
 class RuleAnalyzer extends ARLVisitor<void> {
@@ -113,13 +128,20 @@ class RuleAnalyzer extends ARLVisitor<void> {
   Rule? iterableRule;
   IterableCondition? iterableCondition;
 
+  List<Rule> ifRules;
+
   RuleAnalyzer()
-      : nodeCount = 0,
+      : ifRules = [],
+        nodeCount = 0,
         nullChecked = false,
         inIterable = false;
 
   @override
   void visitAttachedNode(AttachedNode node, void args) {
+    if (ifRules.isNotEmpty) {
+      warning(node.element, 'Do not append any rules to an if rule');
+    }
+
     nodeCount++;
   }
 
@@ -168,5 +190,10 @@ class RuleAnalyzer extends ARLVisitor<void> {
   @override
   void visitIterableRootNode(IterableRootNode node, void args) {
     inIterable = true;
+  }
+
+  @override
+  void visitIfRootNode(IfRootNode node, void args) {
+    ifRules = node.rules.mapIndexed((i, e) => Rule.fromARL(e, i)).toList();
   }
 }
