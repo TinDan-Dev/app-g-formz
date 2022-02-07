@@ -33,6 +33,14 @@ Iterable<FieldConverterInfo> analyzeNullCheckConverter(
   String? ifCondition,
 ) sync* {
   for (final rule in rules) {
+    if (rule.hasCondition) {
+      if (ifCondition != null) {
+        error(null, 'Nested if conditions are not supported');
+      }
+
+      yield* analyzeNullCheckConverter(ctx, info, rule.ifRules, rule.ifCondition);
+    }
+
     final fieldName = rule.fieldName;
     if (fieldName == null) continue;
 
@@ -55,14 +63,6 @@ Iterable<FieldConverterInfo> analyzeNullCheckConverter(
         type: ctx.resolveLType(field.type),
         ifCondition: ifCondition,
       );
-    }
-
-    if (rule.hasCondition) {
-      if (ifCondition != null) {
-        error(null, 'Nested if conditions are not supported');
-      }
-
-      yield* analyzeNullCheckConverter(ctx, info, rule.ifRules, rule.ifCondition);
     }
   }
 }

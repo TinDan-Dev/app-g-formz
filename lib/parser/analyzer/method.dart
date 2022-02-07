@@ -118,7 +118,7 @@ class _CreateMethodCollector extends SimpleElementVisitor<void> {
     if (!LType.sameType(targetType, createMethodType)) {
       error(
         null,
-        'The return type of the "$createInstanceMethodName" method should be: $targetType',
+        'The return type of ${node.name} should be: $targetType',
       );
     }
 
@@ -129,7 +129,7 @@ class _CreateMethodCollector extends SimpleElementVisitor<void> {
 
     methods.add(CreateMethod(
       methodParameters: parameters,
-      methodName: createInstanceMethodName,
+      methodName: node.name,
       returnType: targetType,
       ifCondition: ifCondition,
       body: null,

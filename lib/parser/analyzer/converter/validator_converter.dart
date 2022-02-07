@@ -79,6 +79,14 @@ Iterable<ConverterInfo> analyzeValidatorConvert(
   String? ifCondition,
 ) sync* {
   for (final rule in rules) {
+    if (rule.hasCondition) {
+      if (ifCondition != null) {
+        error(null, 'Nested if conditions are not supported');
+      }
+
+      yield* analyzeValidatorConvert(ctx, info, rule.ifRules, rule.ifCondition);
+    }
+
     final result = _analyzeValidator(rule.fieldName, rule.validator, info.source);
     if (result != null) {
       yield ValidatorConverterInfo(
@@ -104,14 +112,6 @@ Iterable<ConverterInfo> analyzeValidatorConvert(
         to: to,
         ifCondition: ifCondition,
       );
-    }
-
-    if (rule.hasCondition) {
-      if (ifCondition != null) {
-        error(null, 'Nested if conditions are not supported');
-      }
-
-      yield* analyzeValidatorConvert(ctx, info, rule.ifRules, rule.ifCondition);
     }
   }
 }
