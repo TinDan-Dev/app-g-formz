@@ -146,12 +146,21 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "7.2.0"
+  flutter_lints:
+    dependency: "direct main"
+    description:
+      name: flutter_lints
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.0.4"
   formz:
     dependency: "direct main"
     description:
-      path: "../app-formz"
-      relative: true
-    source: path
+      path: "."
+      ref: HEAD
+      resolved-ref: "3ad03d606bfe5d6ac1fb3416722de98660cdbe18"
+      url: "https://git@github.com/TinDan-Dev/app-formz.git"
+    source: git
     version: "1.0.4"
   freezed_annotation:
     dependency: transitive
@@ -174,13 +183,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "4.4.0"
-  lint:
-    dependency: "direct main"
+  lints:
+    dependency: transitive
     description:
-      name: lint
+      name: lints
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.6.0"
+    version: "1.0.1"
   logging:
     dependency: transitive
     description:
@@ -195,6 +204,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.12.11"
+  material_color_utilities:
+    dependency: transitive
+    description:
+      name: material_color_utilities
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.1.3"
   meta:
     dependency: transitive
     description:
